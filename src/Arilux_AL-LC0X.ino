@@ -199,6 +199,29 @@ void publishToMQTT(const char* topic, const char* payload) {
     }
 }
 
+HSB getOffState(const HSB& hsb) {
+    return hsb.toBuilder().white1(0).white2(0).brightness(0).build();
+}
+
+HSB getOnState(const HSB& hsb) {
+    // If the light is already on, we ignore EEPROM settings
+    if (hsb.brightness() > 0) {
+        return hsb;
+    } else {
+        const HSB settings = eepromStore.get().hsb();
+        return hsb.toBuilder()
+               .white1(settings.white1())
+               .white2(settings.white2())
+               // On state forces lights to go on, so we constrain it with a minimjm brightness value
+               // as a saveguard
+               .brightness(constrain(
+                               settings.brightness() < STARTUP_MIN_BRIGHTNESS ? STARTUP_MIN_BRIGHTNESS : settings.brightness()
+                               ,DEFAULT_BRIGHTNESS_VALUE
+                               ,100.f))
+               .build();
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 //  MQTT
 ///////////////////////////////////////////////////////////////////////////
@@ -226,36 +249,36 @@ HSB hsbFromString(const HSB& hsb, const char* data) {
             OptParser::get(f.asChar(), ",", [&h, &s, &b, &w1, &w2](OptValue c) {
                 switch (c.pos()) {
                     case 0:
-                        h = constrain(c.asFloat(), 0.0, 359.99);
+                        h = constrain(c.asFloat(), 0.f, 359.99f);
                         break;
 
                     case 1:
-                        s = constrain(c.asFloat(), 0.0, 100.0);
+                        s = constrain(c.asFloat(), 0.f, 100.f);
                         break;
 
                     case 2:
-                        b = constrain(c.asFloat(), 0.0, 100.0);
+                        b = constrain(c.asFloat(), 0.f, 100.f);
                         break;
 
                     case 3:
-                        w1 = constrain(c.asFloat(), 0.0, 100.0);
+                        w1 = constrain(c.asFloat(), 0.f, 100.f);
                         break;
 
                     case 4:
-                        w2 = constrain(c.asFloat(), 0.0, 100.0);
+                        w2 = constrain(c.asFloat(), 0.f, 100.f);
                         break;
                 }
             });
         } else if (strcmp(f.key(), "h") == 0) {
-            h = constrain(f.asFloat(), 0.0, 359.99);
+            h = constrain(f.asFloat(), 0.f, 359.99f);
         } else if (strcmp(f.key(), "s") == 0) {
-            s = constrain(f.asFloat(), 0.0, 100.0);
+            s = constrain(f.asFloat(), 0.f, 100.f);
         } else if (strcmp(f.key(), "b") == 0) {
-            b = constrain(f.asFloat(), 0.0, 100.0);
+            b = constrain(f.asFloat(), 0.f, 100.f);
         } else if (strcmp(f.key(), "w1") == 0) {
-            w1 = constrain(f.asFloat(), 0.0, 100.0);
+            w1 = constrain(f.asFloat(), 0.f, 100.f);
         } else if (strcmp(f.key(), "w2") == 0) {
-            w2 = constrain(f.asFloat(), 0.0, 100.0);
+            w2 = constrain(f.asFloat(), 0.f, 100.f);
         }
     });
     return HSB(h, s, b, w1, w2);
@@ -323,7 +346,7 @@ void callback(char* p_topic, byte* p_payload, uint16_t p_length) {
             if (strcmp(v.key(), FNAME) == 0) {
                 name = v.asChar();
             } else if (strcmp(v.key(), FALPHA) == 0) {
-                alpha = constrain(v.asFloat(), 0.001, 1.0);
+                alpha = constrain(v.asFloat(), 0.01f, 1.f);
             }
         });
 
@@ -413,28 +436,7 @@ void callback(char* p_topic, byte* p_payload, uint16_t p_length) {
     }
 }
 
-HSB getOffState(const HSB& hsb) {
-    return hsb.toBuilder().white1(0).white2(0).brightness(0).build();
-}
 
-HSB getOnState(const HSB& hsb) {
-    // If the light is already on, we ignore EEPROM settings
-    if (hsb.brightness() > 0) {
-        return hsb;
-    } else {
-        const HSB settings = eepromStore.get().hsb();
-        return hsb.toBuilder()
-               .white1(settings.white1())
-               .white2(settings.white2())
-               // On state forces lights to go on, so we constrain it with a minimjm brightness value
-               // as a saveguard
-               .brightness(constrain(
-                               settings.brightness() < STARTUP_MIN_BRIGHTNESS ? STARTUP_MIN_BRIGHTNESS : settings.brightness()
-                               ,DEFAULT_BRIGHTNESS_VALUE
-                               ,100.0))
-               .build();
-    }
-}
 
 void connectMQTTTopic() {
     if (mqttClient.connected()) {
@@ -614,20 +616,20 @@ void handleRFRemote(void) {
 
             case ARILUX_REMOTE_KEY_SPEED_PLUS:
                 // TODO: Implement some incremantal speedup filter
-                workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() + 5, 360.0)).build();
+                workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() + 5, 360.f)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_SPEED_MINUS:
                 // TODO: Implement some incremantal speedup filter
-                workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() - 5, 360.0)).build();
+                workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() - 5, 360.f)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_MODE_PLUS:
-                workingHsb = workingHsb.toBuilder().saturation(constrain(workingHsb.saturation() + 5, 0.0, 100.0)).build();
+                workingHsb = workingHsb.toBuilder().saturation(constrain(workingHsb.saturation() + 5, 0.f, 100.f)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_MODE_MINUS:
-                workingHsb = workingHsb.toBuilder().saturation(constrain(workingHsb.saturation() - 5, 0.0, 100.0)).build();
+                workingHsb = workingHsb.toBuilder().saturation(constrain(workingHsb.saturation() - 5, 0.f, 100.f)).build();
                 break;
 
             default:
@@ -798,14 +800,15 @@ void handleEffects() {
 
 
 void onceASecond() {
-#ifdef DEBUG_SERIAL || DEBUG_TELNET
-    uint16_t colors[3];
-    currentHsb.constantRGB(colors);
+#if defined(DEBUG_SERIAL) || defined(DEBUG_TELNET)
+    uint16_t rgbColors[3];
+    currentHsb.constantRGB(rgbColors);
     char str[128];
-    sprintf(str, "rgb %d,%d,%d", colors[0], colors[1], colors[2]);
+    sprintf(str, "rgb %d,%d,%d", rgbColors[0], rgbColors[1], rgbColors[2]);
     DEBUG_PRINTLN(str);
-    currentHsb.getHSB(colors);
-    sprintf(str, "hsb %d,%d,%d w %d,%d", colors[0], colors[1], colors[2], currentHsb.white1(), currentHsb.white2());
+    float hsbColors[3];
+    currentHsb.getHSB(hsbColors);
+    sprintf(str, "hsb %.2f,%.2f,%.2f w %.2f,%.2f", hsbColors[0], hsbColors[1], hsbColors[2], currentHsb.white1(), currentHsb.white2());
     DEBUG_PRINTLN(str);
 #endif
 }

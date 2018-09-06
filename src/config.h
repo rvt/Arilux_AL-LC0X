@@ -14,7 +14,7 @@
 #define DEVICE_MODEL                           "LC01"
 #endif
 
-#ifndef RGB || RGBW || RGBWW
+#if defined(RGB) || defined(RGBW) || defined(RGBWW)
 #define RGB
 #endif
 
@@ -132,7 +132,7 @@
 #define FILTER_NONE                 "none"
 #define FILTER_FADING               "fading"
 #define FALPHA                      "alpha"
-#define FILTER_FADING_ALPHA         0.04
+#define FILTER_FADING_ALPHA         0.4f
 
 #define EFFECT                  "effect"
 #define ENAME                  "name"
@@ -162,9 +162,9 @@
 #define EEPROM_COMMIT_BOUNCE_DELAY       5000
 #endif
 
-#define PERCENT_MINIMUM_BRIGHTNESS 1.0
-#define PERCENT_STARTUP_MINIMUM_BRIGHTNESS 5.0
-#define PERCENT_DEFAULT_BRIGHTNESS 15.0
+#define PERCENT_MINIMUM_BRIGHTNESS 1.f
+#define PERCENT_STARTUP_MINIMUM_BRIGHTNESS 5.f
+#define PERCENT_DEFAULT_BRIGHTNESS 15.f
 
 // Don't change anything below here
 

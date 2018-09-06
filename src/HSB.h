@@ -68,7 +68,7 @@ public:
      *  360 added and >360 will get 360 substracted
      */
     static float fixHue(float hue) {
-        return fmod((hue < 0.0 ? hue + 360.0 : hue > 360.0 ? hue - 360.0 : hue), 360.0);
+        return fmod((hue < 0.f ? hue + 360.f : hue > 360.f ? hue - 360.f : hue), 360.f);
     }
 
     bool operator ==(const HSB& rhs) const;

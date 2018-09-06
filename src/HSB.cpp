@@ -5,7 +5,7 @@ HSB::HSB(const float p_hue,
          const float p_brightness,
          const float p_white1,
          const float p_white2)
-    : m_hue(fmod(p_hue, 360.0)),
+    : m_hue(fmod(p_hue, 360.f)),
       m_saturation(p_saturation),
       m_brightness(p_brightness),
       m_white1(p_white1),
@@ -60,8 +60,8 @@ float HSB::cwhite2() const {
 
 void HSB::constantRGB(uint16_t colors[]) const {
     float r_temp, g_temp, b_temp;
-    float inverse_sat = 100.0 - m_saturation;
-    float index_mod = fmod(m_hue, 120.0);
+    float inverse_sat = 100.f - m_saturation;
+    float index_mod = fmod(m_hue, 120.f);
 
     if (m_hue < 120) {
         r_temp = 120 - index_mod;
@@ -87,9 +87,9 @@ void HSB::constantRGB(uint16_t colors[]) const {
     r_temp = (r_temp * m_brightness);
     g_temp = (g_temp * m_brightness);
     b_temp = (b_temp * m_brightness);
-    colors[0] = r_temp * 2.55;
-    colors[1] = g_temp * 2.55;
-    colors[2] = b_temp * 2.55;
+    colors[0] = uint16_t(r_temp * 2.55 + 0.5);
+    colors[1] = uint16_t(g_temp * 2.55 + 0.5);
+    colors[2] = uint16_t(b_temp * 2.55 + 0.5);
 }
 
 bool HSB::operator ==(const HSB& rhs) const {
