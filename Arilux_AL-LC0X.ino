@@ -89,12 +89,12 @@ volatile bool arduinoOTAInProgress = false;
 
 // Brightness where we define the lights are OFF
 // Used during startup
-#define STARTUP_MIN_BRIGHTNESS ((uint16_t)SBW_RANGE/100*PERCENT_STARTUP_MINIMUM_BRIGHTNESS)
+#define STARTUP_MIN_BRIGHTNESS ((float)PERCENT_STARTUP_MINIMUM_BRIGHTNESS)
 
-#define MIN_BRIGHTNESS ((uint16_t)SBW_RANGE/100*PERCENT_MINIMUM_BRIGHTNESS)
+#define MIN_BRIGHTNESS ((float)PERCENT_MINIMUM_BRIGHTNESS)
 
 // Default brightness if we cannot find any
-#define DEFAULT_BRIGHTNESS_VALUE ((uint16_t)SBW_RANGE/100*PERCENT_DEFAULT_BRIGHTNESS)
+#define DEFAULT_BRIGHTNESS_VALUE ((float)PERCENT_DEFAULT_BRIGHTNESS)
 
 uint16_t waitingForStateCaptureAt = 1;
 
@@ -215,50 +215,47 @@ void publishToMQTT(const char* topic, const char* payload) {
  * Example 5: hsb=100,101,102 12,13,14,15,16
  */
 HSB hsbFromString(const HSB& hsb, const char* data) {
-    auto cstrSBW_RANGE = [](float in) {
-        return constrain(in, 0.0, 100.0) * 10.2;
-    };
     uint16_t h, s, b, w1, w2;
     h = hsb.hue();
     s = hsb.saturation();
     b = hsb.brightness();
     w1 = hsb.white1();
     w2 = hsb.white1();
-    OptParser::get(data, [cstrSBW_RANGE, &h, &s, &b, &w1, &w2](OptValue f) {
+    OptParser::get(data, [&h, &s, &b, &w1, &w2](OptValue f) {
         if (strstr(f.key(), "hsb") != nullptr || strstr(f.key(), ",") != nullptr) {
-            OptParser::get(f.asChar(), ",", [cstrSBW_RANGE, &h, &s, &b, &w1, &w2](OptValue c) {
+            OptParser::get(f.asChar(), ",", [&h, &s, &b, &w1, &w2](OptValue c) {
                 switch (c.pos()) {
                     case 0:
-                        h = constrain(c.asFloat(), 0, 359);
+                        h = constrain(c.asFloat(), 0.0, 359.99);
                         break;
 
                     case 1:
-                        s = cstrSBW_RANGE(c.asFloat());
+                        s = constrain(c.asFloat(), 0.0, 100.0);
                         break;
 
                     case 2:
-                        b = cstrSBW_RANGE(c.asFloat());
+                        b = constrain(c.asFloat(), 0.0, 100.0);
                         break;
 
                     case 3:
-                        w1 = cstrSBW_RANGE(c.asFloat());
+                        w1 = constrain(c.asFloat(), 0.0, 100.0);
                         break;
 
                     case 4:
-                        w2 = cstrSBW_RANGE(c.asFloat());
+                        w2 = constrain(c.asFloat(), 0.0, 100.0);
                         break;
                 }
             });
         } else if (strcmp(f.key(), "h") == 0) {
-            h = constrain(f.asFloat(), 0, 359);
+            h = constrain(f.asFloat(), 0.0, 359.99);
         } else if (strcmp(f.key(), "s") == 0) {
-            s = cstrSBW_RANGE(f.asFloat());
+            s = constrain(f.asFloat(), 0.0, 100.0);
         } else if (strcmp(f.key(), "b") == 0) {
-            b = cstrSBW_RANGE(f.asFloat());
+            b = constrain(f.asFloat(), 0.0, 100.0);
         } else if (strcmp(f.key(), "w1") == 0) {
-            w1 = cstrSBW_RANGE(f.asFloat());
+            w1 = constrain(f.asFloat(), 0.0, 100.0);
         } else if (strcmp(f.key(), "w2") == 0) {
-            w2 = cstrSBW_RANGE(f.asFloat());
+            w2 = constrain(f.asFloat(), 0.0, 100.0);
         }
     });
     return HSB(h, s, b, w1, w2);
@@ -434,7 +431,7 @@ HSB getOnState(const HSB& hsb) {
                .brightness(constrain(
                                settings.brightness() < STARTUP_MIN_BRIGHTNESS ? STARTUP_MIN_BRIGHTNESS : settings.brightness()
                                ,DEFAULT_BRIGHTNESS_VALUE
-                               ,SBW_RANGE))
+                               ,100.0))
                .build();
     }
 }
@@ -617,20 +614,20 @@ void handleRFRemote(void) {
 
             case ARILUX_REMOTE_KEY_SPEED_PLUS:
                 // TODO: Implement some incremantal speedup filter
-                workingHsb = workingHsb.toBuilder().hue((workingHsb.hue() + 5 % 360)).build();
+                workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() + 5, 360.0)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_SPEED_MINUS:
                 // TODO: Implement some incremantal speedup filter
-                workingHsb = workingHsb.toBuilder().hue((workingHsb.hue() - 5 % 360)).build();
+                workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() - 5, 360.0)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_MODE_PLUS:
-                workingHsb = workingHsb.toBuilder().saturation(constrain(workingHsb.saturation() + 5, 0, SBW_RANGE)).build();
+                workingHsb = workingHsb.toBuilder().saturation(constrain(workingHsb.saturation() + 5, 0.0, 100.0)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_MODE_MINUS:
-                workingHsb = workingHsb.toBuilder().saturation(constrain(workingHsb.saturation() - 5, 0, SBW_RANGE)).build();
+                workingHsb = workingHsb.toBuilder().saturation(constrain(workingHsb.saturation() - 5, 0.0, 100.0)).build();
                 break;
 
             default:

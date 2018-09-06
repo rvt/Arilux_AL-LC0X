@@ -153,9 +153,6 @@
 #define MQTT_LASTWILL_ONLINE       "online"
 #define MQTT_LASTWILL_OFFLINE      "offline"
 
-#define BRIGHTNESS_INCREASE     100
-#define BRIGHTNESS_DECREASE     -100
-
 #ifndef EEPROM_COMMIT_WAIT_DELAY
 // Number of milli seconds to wait untill we commit to EEPROM
 #define EEPROM_COMMIT_WAIT_DELAY       300000
@@ -165,9 +162,9 @@
 #define EEPROM_COMMIT_BOUNCE_DELAY       5000
 #endif
 
-#define PERCENT_MINIMUM_BRIGHTNESS 1
-#define PERCENT_STARTUP_MINIMUM_BRIGHTNESS 5
-#define PERCENT_DEFAULT_BRIGHTNESS 15
+#define PERCENT_MINIMUM_BRIGHTNESS 1.0
+#define PERCENT_STARTUP_MINIMUM_BRIGHTNESS 5.0
+#define PERCENT_DEFAULT_BRIGHTNESS 15.0
 
 // Don't change anything below here
 
