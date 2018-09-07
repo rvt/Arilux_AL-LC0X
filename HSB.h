@@ -34,7 +34,7 @@ public:
     /**
      * Create rgb colors 0..255
      */
-    void constantRGB(uint16_t colors[]) const;
+    void constantRGB(float colors[]) const;
 
     /**
      * Calculate shortest path from one hue to the next hue

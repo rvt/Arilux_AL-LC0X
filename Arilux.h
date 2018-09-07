@@ -137,7 +137,7 @@ class Arilux {
 public:
     Arilux();
     bool init(void) const;
-    bool setAll(const uint16_t p_red, const uint16_t p_green, const uint16_t p_blue, const uint16_t p_white1, const uint16_t p_white2) const;
+    bool setAll(const float p_red, const float p_green, const float p_blue, const float p_white1, const float p_white2) const;
     const char* getColorString(void) const;
 
 private:

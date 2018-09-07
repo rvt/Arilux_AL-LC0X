@@ -698,7 +698,7 @@ void setup() {
     workingHsb = getOnState(settingsDTO.hsb().toBuilder().brightness(0).build());
     brightnessAtBoot = workingHsb.brightness();
     currentHsb = workingHsb;
-    uint16_t colors[3];
+    float colors[3];
     workingHsb.constantRGB(colors);
     arilux.setAll(colors[0], colors[1], colors[2], currentHsb.cwhite1(), currentHsb.cwhite2());
     // Setup Wi-Fi
@@ -741,8 +741,8 @@ void setup() {
 
     do {
         yield();
-        uint16_t colors[3];
-        HSB hsb(i, 255 * 4, 255, 0, 0);
+        float colors[3];
+        HSB hsb(i, 100.f, 100.f, 0.f, 0.f);
         hsb.constantRGB(colors);
         arilux.setAll(colors[0], colors[1], colors[2], 0, 0);
         ArduinoOTA.handle();
@@ -791,7 +791,7 @@ void handleEffects() {
     settingsDTO.hsb(currentHsb);
     currentHsb = powerFilter.handleFilter(transitionCounter, currentMillies, currentHsb);
     currentHsb = currentFilter->handleFilter(transitionCounter, currentMillies, currentHsb);
-    uint16_t colors[3];
+    float colors[3];
     currentHsb.constantRGB(colors);
     arilux.setAll(colors[0], colors[1], colors[2], currentHsb.cwhite1(), currentHsb.cwhite2());
 }
@@ -799,13 +799,13 @@ void handleEffects() {
 
 void onceASecond() {
 #ifdef DEBUG_SERIAL || DEBUG_TELNET
-    uint16_t colors[3];
+    float colors[3];
     currentHsb.constantRGB(colors);
     char str[128];
-    sprintf(str, "rgb %d,%d,%d", colors[0], colors[1], colors[2]);
+    sprintf(str, "rgb %.2f,%.2f,%.2f", colors[0], colors[1], colors[2]);
     DEBUG_PRINTLN(str);
     currentHsb.getHSB(colors);
-    sprintf(str, "hsb %d,%d,%d w %d,%d", colors[0], colors[1], colors[2], currentHsb.white1(), currentHsb.white2());
+    sprintf(str, "hsb %.2f,%.2f,%.2f w %.2f,%.2f", colors[0], colors[1], colors[2], currentHsb.white1(), currentHsb.white2());
     DEBUG_PRINTLN(str);
 #endif
 }
