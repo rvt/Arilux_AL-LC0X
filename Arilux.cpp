@@ -41,7 +41,7 @@ bool Arilux::setAll(const float p_red, const float p_green, const float p_blue, 
     analogWrite(m_greenPin, clamp(map(p_green, 0.f, 100.f, 0, ARILUX_PWM_RANGE)));
     analogWrite(m_bluePin, clamp(map(p_blue, 0.f, 100.f, 0, ARILUX_PWM_RANGE)));
 #if defined(RGBW) || defined(RGBWW)
-    analogWrite(m_white1Pin, clamp(map(p_white2, 0.f, 100.f, 0, ARILUX_PWM_RANGE)));
+    analogWrite(m_white1Pin, clamp(map(p_white1, 0.f, 100.f, 0, ARILUX_PWM_RANGE)));
     #ifdef RGBWW
         analogWrite(m_white2Pin, clamp(map(p_white2, 0.f, 100.f, 0, ARILUX_PWM_RANGE)));
     #endif
