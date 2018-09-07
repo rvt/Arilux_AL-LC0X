@@ -215,7 +215,7 @@ void publishToMQTT(const char* topic, const char* payload) {
  * Example 5: hsb=100,101,102 12,13,14,15,16
  */
 HSB hsbFromString(const HSB& hsb, const char* data) {
-    uint16_t h, s, b, w1, w2;
+    float h, s, b, w1, w2;
     h = hsb.hue();
     s = hsb.saturation();
     b = hsb.brightness();
@@ -226,23 +226,23 @@ HSB hsbFromString(const HSB& hsb, const char* data) {
             OptParser::get(f.asChar(), ",", [&h, &s, &b, &w1, &w2](OptValue c) {
                 switch (c.pos()) {
                     case 0:
-                        h = constrain(c.asFloat(), 0.0, 359.99);
+                        h = constrain(c.asFloat(), 0.f, 359.99f);
                         break;
 
                     case 1:
-                        s = constrain(c.asFloat(), 0.0, 100.0);
+                        s = constrain(c.asFloat(), 0.f, 100.f);
                         break;
 
                     case 2:
-                        b = constrain(c.asFloat(), 0.0, 100.0);
+                        b = constrain(c.asFloat(), 0.f, 100.f);
                         break;
 
                     case 3:
-                        w1 = constrain(c.asFloat(), 0.0, 100.0);
+                        w1 = constrain(c.asFloat(), 0.f, 100.f);
                         break;
 
                     case 4:
-                        w2 = constrain(c.asFloat(), 0.0, 100.0);
+                        w2 = constrain(c.asFloat(), 0.f, 100.f);
                         break;
                 }
             });
