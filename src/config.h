@@ -132,7 +132,7 @@
 #define FILTER_NONE                 "none"
 #define FILTER_FADING               "fading"
 #define FALPHA                      "alpha"
-#define FILTER_FADING_ALPHA         0.4f
+#define FILTER_FADING_ALPHA         0.1f
 
 #define EFFECT                  "effect"
 #define ENAME                  "name"

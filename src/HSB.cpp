@@ -58,38 +58,40 @@ float HSB::cwhite2() const {
     return m_white2;
 }
 
-void HSB::constantRGB(uint16_t colors[]) const {
+void HSB::constantRGB(float colors[]) const {
     float r_temp, g_temp, b_temp;
-    float inverse_sat = 100.f - m_saturation;
+    float inverse_sat = 100.0 - m_saturation;
+    float m_brightness_mod = m_brightness / 100.f;
+    float m_saturation_mod = m_saturation / 120.f;
     float index_mod = fmod(m_hue, 120.f);
 
-    if (m_hue < 120) {
-        r_temp = 120 - index_mod;
+    if (m_hue < 120.f) {
+        r_temp = 120.f - index_mod;
         g_temp = index_mod;
-        b_temp = 0;
-    } else if (m_hue < 240) {
-        r_temp = 0;
-        g_temp = 120 - index_mod;
+        b_temp = 0.f;
+    } else if (m_hue < 240.f) {
+        r_temp = 0.f;
+        g_temp = 120.f - index_mod;
         b_temp = index_mod;
-    } else if (m_hue < 360) {
+    } else if (m_hue < 360.f) {
         r_temp = index_mod;
-        g_temp = 0;
-        b_temp = 120 - index_mod;
+        g_temp = 0.f;
+        b_temp = 120.f - index_mod;
     } else {
-        r_temp = 0;
-        g_temp = 0;
-        b_temp = 0;
+        r_temp = 0.f;
+        g_temp = 0.f;
+        b_temp = 0.f;
     }
 
-    r_temp = ((r_temp * m_saturation) / 120) + inverse_sat;
-    g_temp = ((g_temp * m_saturation) / 120) + inverse_sat;
-    b_temp = ((b_temp * m_saturation) / 120) + inverse_sat;
-    r_temp = (r_temp * m_brightness);
-    g_temp = (g_temp * m_brightness);
-    b_temp = (b_temp * m_brightness);
-    colors[0] = uint16_t(r_temp * 2.55 + 0.5);
-    colors[1] = uint16_t(g_temp * 2.55 + 0.5);
-    colors[2] = uint16_t(b_temp * 2.55 + 0.5);
+    r_temp = (r_temp * m_saturation_mod) + inverse_sat;
+    g_temp = (g_temp * m_saturation_mod) + inverse_sat;
+    b_temp = (b_temp * m_saturation_mod) + inverse_sat;
+    r_temp = (r_temp * m_brightness_mod);
+    g_temp = (g_temp * m_brightness_mod);
+    b_temp = (b_temp * m_brightness_mod);
+    colors[0] = r_temp;
+    colors[1] = g_temp;
+    colors[2] = b_temp;
 }
 
 bool HSB::operator ==(const HSB& rhs) const {
