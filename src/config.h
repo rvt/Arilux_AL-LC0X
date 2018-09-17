@@ -1,22 +1,33 @@
 #include "setup.h"
 
+#ifndef RED_PIN
+#define RED_PIN 0
+#endif
 
-// #define DEVICE_MODEL                           "LC01"
-// #define DEVICE_MODEL                           "LC02"
-// #define DEVICE_MODEL                           "LC03"
-// #define DEVICE_MODEL                           "LC04"
-// #define DEVICE_MODEL                           "LC08"
-// #define DEVICE_MODEL                           "LC09"
-// #define DEVICE_MODEL                           "LC10"
-// #define DEVICE_MODEL                           "LC11"
+#ifndef GREEN_PIN
+#define GREEN_PIN 0
+#endif
+
+#ifndef BLUE_PIN
+#define BLUE_PIN 0
+#endif
+
+#ifndef WHITE1_PIN
+#define WHITE1_PIN 0
+#endif
+
+#ifndef WHITE2_PIN
+#define WHITE2_PIN 0
+#endif
+
+#ifndef MQTT_PREFIX
+#define MQTT_PREFIX                    "UNDEFINED"
+#endif
 
 #ifndef DEVICE_MODEL
-#define DEVICE_MODEL                           "LC01"
+#define DEVICE_MODEL                    "UNDEFINED"
 #endif
 
-#if defined(RGB) || defined(RGBW) || defined(RGBWW)
-#define RGB
-#endif
 
 // #define IR_REMOTE
 // #define RF_REMOTE

@@ -115,7 +115,7 @@ BrightnessFilter brightnessFilter(25);
 PowerFilter powerFilter(true);
 
 // Arilux device interface
-Arilux arilux;
+Arilux arilux(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN);
 
 #ifdef RF_REMOTE
 RCSwitch rcSwitch = RCSwitch();
@@ -661,13 +661,14 @@ char* makeString(const char* format, ...) {
 void setup() {
     Serial.begin(9600);
     delay(50);
+    Serial.print("Starting");
     EEPROM.begin(32); // TODO make some way to get datasize from objects using eeprom
     // chipId : 00FF1234
     chipId = makeString("%08X", ESP.getChipId());
     // ARILUX00FF1234
     mqttClientID = makeString(HOSTNAME_TEMPLATE, chipId);
     // RGBW/00FF1234
-    mqttTopicPrefix = makeString(MQTT_TOPIC_PREFIX_TEMPLATE, arilux.getColorString(), chipId);
+    mqttTopicPrefix = makeString(MQTT_TOPIC_PREFIX_TEMPLATE, MQTT_PREFIX, chipId);
     // RGBW/00FF1234/lastwill
     mqttLastWillTopic = makeString(MQTT_LASTWILL_TOPIC_TEMPLATE, mqttTopicPrefix);
     //  RGBW/00FF1234/+
@@ -677,9 +678,9 @@ void setup() {
     // Calculate length of the subcriber topic
     mqttSubscriberTopicStrLength = strlen(mqttSubscriberTopic) - 2;
     // friendlyName : Arilux LC11 RGBW LED Controller 00FF1234
-    friendlyName = makeString("Arilux %s %s LED Controller %s", DEVICE_MODEL, arilux.getColorString(), chipId);
+    friendlyName = makeString("Arilux %s %s LED Controller %s", DEVICE_MODEL, MQTT_PREFIX, chipId);
     homeAssistantDiscoveryTopic = makeString(HOME_ASSISTANCE_MQTT_DISCOVERY_TOPIC_TEMPLATE,
-                                             HOME_ASSISTANT_MQTT_DISCOVERY_PREFIX, DEVICE_MODEL, arilux.getColorString(), chipId);
+                                             HOME_ASSISTANT_MQTT_DISCOVERY_PREFIX, DEVICE_MODEL, MQTT_PREFIX, chipId);
     // Hass Message for auto discovery
     homeAssistantDiscoveryMsg = makeString(MQTT_HASS_DISCOVERY_TEMPLATE,
                                            friendlyName,
@@ -692,7 +693,7 @@ void setup() {
     Serial.print("Hostname:");
     Serial.println(mqttClientID);
     // Init the Arilux LED controller
-    arilux.init();
+
     // set color from EEPROM to ensure we turn on light as quickly as possible
     settingsDTO = eepromStore.get();
     settingsDTO.power(true);
@@ -700,9 +701,14 @@ void setup() {
     workingHsb = getOnState(settingsDTO.hsb().toBuilder().brightness(0).build());
     brightnessAtBoot = workingHsb.brightness();
     currentHsb = workingHsb;
+
+#ifndef PAUSE_FOR_OTA
+    arilux.init();
     float colors[3];
     workingHsb.constantRGB(colors);
     arilux.setAll(colors[0], colors[1], colors[2], currentHsb.cwhite1(), currentHsb.cwhite2());
+#endif
+
     // Setup Wi-Fi
     WiFi.hostname(mqttClientID);
     setupWiFi();
@@ -738,22 +744,20 @@ void setup() {
     // Start the Telnet server
     startTelnet();
 #endif
+
 #ifdef PAUSE_FOR_OTA
+    arilux.init();
     uint16_t i = 0;
 
     do {
         yield();
-        float colors[3];
-        HSB hsb(i, 100.f, 100.f, 0.f, 0.f);
-        hsb.constantRGB(colors);
-        arilux.setAll(colors[0], colors[1], colors[2], 0, 0);
         ArduinoOTA.handle();
         yield();
         delay(10);
         i++;
-    } while (i < 360 * 2 || arduinoOTAInProgress);
-
+    } while (i < 750 || arduinoOTAInProgress);
 #endif
+
     // Start boot sequence
     bootSequence.reset(new StateMachine<BootSequenceStatus>(ARRAY_SIZE(timedStates), timedStates, timeTimedStates2, BOOTSEQUENCEEND));
     bootSequence->advance();
@@ -764,9 +768,9 @@ void setup() {
 #ifdef DEBUG_TELNET
     handleTelnet();
 #endif
-#ifdef RF_REMOTE
+#ifdef RF_PIN
     // Start the RF receiver
-    rcSwitch.enableReceive(ARILUX_RF_PIN);
+    rcSwitch.enableReceive(RF_PIN);
 #endif
     mqttStore.reset(new MQTTStore(
                         mqttTopicPrefix,
@@ -802,11 +806,10 @@ void handleEffects() {
 void onceASecond() {
 #if defined(DEBUG_SERIAL) || defined(DEBUG_TELNET)
     float colors[3];
-    currentHsb.constantRGB(rgbColors);
+    currentHsb.constantRGB(colors);
     char str[128];
     sprintf(str, "rgb %.2f,%.2f,%.2f", colors[0], colors[1], colors[2]);
     DEBUG_PRINTLN(str);
-    float hsbColors[3];
     currentHsb.getHSB(colors);
     sprintf(str, "hsb %.2f,%.2f,%.2f w %.2f,%.2f", colors[0], colors[1], colors[2], currentHsb.white1(), currentHsb.white2());
     DEBUG_PRINTLN(str);
