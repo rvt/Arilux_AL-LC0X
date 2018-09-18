@@ -40,7 +40,7 @@ IDeas
 
 ## Todo
 
- - Configure using some form of web based interface, eg, no need to configure for each device using the setup.h file
+ - Configure using some form of web based interface,ard eg, no need to configure for each device using the setup.h file
  - ASync TCP / MQTT client
  - Store and reload the current active Filter in EEPROM/MQTT so the device comes back up correctly after reboot
  - Check if we can use a better way of debugging lines

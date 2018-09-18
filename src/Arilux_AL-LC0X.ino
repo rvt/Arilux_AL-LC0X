@@ -7,7 +7,7 @@
 #include "debug.h"
 
 #include <ESP8266WiFi.h>  // https://github.com/esp8266/Arduino
-
+#include <ESP8266mDNS.h>
 #include "config.h"
 
 #ifdef IR_REMOTE
@@ -712,6 +712,7 @@ void setup() {
     // Setup Wi-Fi
     WiFi.hostname(mqttClientID);
     setupWiFi();
+    MDNS.begin(mqttClientID);
 #ifdef TLS
     // Check the fingerprint of CloudMQTT's SSL cert
     verifyFingerprint();
@@ -719,8 +720,10 @@ void setup() {
     // Start OTA
     ArduinoOTA.setHostname(mqttClientID);
     ArduinoOTA.onStart([]() {
+        // Disable outputs as this might interfere with OTA
+        arilux.setAll(0,0,0,0,0);
         arduinoOTAInProgress = true;
-        DEBUG_PRINTLN(F("OTA Beginning!"));
+        DEBUG_PRINTLN(F("OTA Beginning"));
     });
     ArduinoOTA.onError([](ota_error_t error) {
         DEBUG_PRINT("ArduinoOTA Error[");
@@ -755,7 +758,7 @@ void setup() {
         yield();
         delay(10);
         i++;
-    } while (i < 750 || arduinoOTAInProgress);
+    } while (i < 750 /*|| arduinoOTAInProgress*/);
 #endif
 
     // Start boot sequence
