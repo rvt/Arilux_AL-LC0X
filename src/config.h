@@ -92,37 +92,6 @@
 #define MQTT_COLOR_STATE_TOPIC                 "/color/state"
 #define MQTT_FILTER_STATE_TOPIC                "/filter/state"
 
-// Command Topics
-#define MQTT_FILTER_TOPIC                      "/filter"
-#define MQTT_COLOR_TOPIC                       "/color"
-#define MQTT_REMOTE_TOPIC                      "/remote"
-#define MQTT_STATE_TOPIC                       "/state"
-#define MQTT_EFFECT_TOPIC                      "/effect"
-#define MQTT_STORE_TOPIC                       "/store"
-#define MQTT_RESTART_TOPIC                     "/restart"
-
-#define MQTT_HASS_DISCOVERY_TEMPLATE "{"\
-    "\"platform\": \"mqtt_template\","\
-    "\"name\": \"%s\","\
-    "\"command_topic\": \"%s%s\","\
-    "\"state_topic\": \"%s%s/state\","\
-    "\"state_template\": \"{{value.split('state=')[1] | lower}}\","\
-    "\"command_on_template\": \"state=" STATE_ON " {%%if brightness%%}b={{brightness/2.55}}{%%endif%%}\","\
-    "\"command_off_template\": \"state=" STATE_OFF "\","\
-    "\"brightness_template\": \"{{(value.split('hsb=')[1].split(' ')[0].split(',')[2] | float *2.55) | int}}\","\
-    "\"availability_topic\": \"%s\","\
-    "\"payload_available\": \"" MQTT_LASTWILL_ONLINE "\","\
-    "\"payload_not_available\": \"" MQTT_LASTWILL_OFFLINE "\""\
-    "}"
-
-
-// Enable Home Assistant MQTT discovery support.
-#define HOME_ASSISTANT_MQTT_DISCOVERY
-#ifndef HOME_ASSISTANT_MQTT_DISCOVERY_PREFIX
-#define HOME_ASSISTANT_MQTT_DISCOVERY_PREFIX   "homeassistant"
-#endif
-#define HOME_ASSISTANCE_MQTT_DISCOVERY_TOPIC_TEMPLATE "%s/light/ARILUX_%s_%s_%s/config"
-
 // When set we store the state (ON/OFF) in the color/state topic
 #ifndef STATE_IN_COLOR_TOPIC
 #define STATE_IN_COLOR_TOPIC                    true
@@ -141,28 +110,6 @@
 // When set we will pause for any OTA messages before we startup, no commands are handled in this time
 // #define PAUSE_FOR_OTA
 
-#define FILTER                      "filter"
-#define FNAME                       "name"
-#define FILTER_NONE                 "none"
-#define FILTER_FADING               "fading"
-#define FALPHA                      "alpha"
-#define FILTER_FADING_ALPHA         0.1f
-
-#define EFFECT                  "effect"
-#define ENAME                  "name"
-#define EFFECT_NONE             "none"
-#define EFFECT_FLASH            "flash"
-#define EFFECT_FADE             "fade"
-#define EFFECT_RAINBOW             "rainbow"
-#define TWIDTH                      "width"
-#define TNAME                       "name"
-#define FILTER_DURATION                   "duration"
-#define FILTER_PULSE                   "pulse"
-#define FILTER_PERIOD                  "period"
-
-#define STATE                       "state"
-#define STATE_ON                         "ON"
-#define STATE_OFF                        "OFF"
 
 #define MQTT_LASTWILL_ONLINE       "online"
 #define MQTT_LASTWILL_OFFLINE      "offline"
@@ -170,37 +117,6 @@
 // Brights at starup when the device was in a off state
 // Bright ness to be considered to be the minimum stored in EEPROM
 #define STARTUP_MIN_BRIGHTNESS 5.f
-
-// PWM Range
-#define ARILUX_PWM_RANGE 1023
-
-// Value at which we set to max AND MIN PWM range using
-// n > ARILUX_PWM_MAX_RANGE_VALUE ? ARILUX_PWM_RANGE : in < ARILUX_PWM_MIN_RANGE_VALUE ? 0 : in;
-
-#define ARILUX_PWM_MAX_RANGE_VALUE 1023
-#define ARILUX_PWM_MIN_RANGE_VALUE 0
-
-// Ranges on which we maximum set each PWM channel
-// This can be used as a cheap calibration (curveless)
-// or to reduce power output to each LED
-#ifndef ARILUX_RED_PWM_RANGE
-#define ARILUX_RED_PWM_RANGE  1023
-#endif
-#ifndef ARILUX_BLUE_PWM_RANGE
-#define ARILUX_BLUE_PWM_RANGE  1023
-#endif
-#ifndef ARILUX_GREEN_PWM_RANGE
-#define ARILUX_GREEN_PWM_RANGE  1023
-#endif
-#ifndef ARILUX_WHITE1_PWM_RANGE
-#define ARILUX_WHITE1_PWM_RANGE  1023
-#endif
-#ifndef ARILUX_WHITE2_PWM_RANGE
-#define ARILUX_WHITE2_PWM_RANGE  1023
-#endif
-
-#define ARILUX_PWM_FREQUENCY 225
-
 
 // Don't change anything below here
 

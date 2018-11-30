@@ -1,5 +1,6 @@
 #include "hsb.h"
 
+
 HSB::HSB(const float p_hue,
          const float p_saturation,
          const float p_brightness,

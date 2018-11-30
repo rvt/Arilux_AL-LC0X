@@ -1,7 +1,8 @@
 #pragma once
-
 #include <stdint.h>
-#include <hsb.h>
+
+class HSB;
+
 /**
  * Base effect class
  */
@@ -12,5 +13,5 @@ public:
        */
     virtual HSB handleFilter(const uint32_t p_count,
                              const uint32_t p_time,
-                             const HSB& p_hsb);
+                             const HSB& p_hsb) = 0;
 };

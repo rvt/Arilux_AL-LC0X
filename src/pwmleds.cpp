@@ -1,8 +1,38 @@
-#include "arilux.h"
+#include "pwmleds.h"
 #include "Arduino.h"
 #include "config.h"
 
-Arilux::Arilux(const uint8_t red_pin,
+// PWM Range
+#define ARILUX_PWM_RANGE 1023
+
+// Value at which we set to max AND MIN PWM range using
+// n > ARILUX_PWM_MAX_RANGE_VALUE ? ARILUX_PWM_RANGE : in < ARILUX_PWM_MIN_RANGE_VALUE ? 0 : in;
+
+#define ARILUX_PWM_MAX_RANGE_VALUE 1023
+#define ARILUX_PWM_MIN_RANGE_VALUE 0
+
+// Ranges on which we maximum set each PWM channel
+// This can be used as a cheap calibration (curveless)
+// or to reduce power output to each LED
+#ifndef ARILUX_RED_PWM_RANGE
+#define ARILUX_RED_PWM_RANGE  1023
+#endif
+#ifndef ARILUX_BLUE_PWM_RANGE
+#define ARILUX_BLUE_PWM_RANGE  1023
+#endif
+#ifndef ARILUX_GREEN_PWM_RANGE
+#define ARILUX_GREEN_PWM_RANGE  1023
+#endif
+#ifndef ARILUX_WHITE1_PWM_RANGE
+#define ARILUX_WHITE1_PWM_RANGE  1023
+#endif
+#ifndef ARILUX_WHITE2_PWM_RANGE
+#define ARILUX_WHITE2_PWM_RANGE  1023
+#endif
+
+#define ARILUX_PWM_FREQUENCY 225
+
+PwmLeds::PwmLeds(const uint8_t red_pin,
         const uint8_t green_pin,
         const uint8_t blue_pin,
         const uint8_t white1_pin,
@@ -15,7 +45,7 @@ Arilux::Arilux(const uint8_t red_pin,
 {
 }
 
-bool Arilux::init(void) const {
+bool PwmLeds::init(void) const {
     analogWriteRange(ARILUX_PWM_RANGE);
     analogWriteFreq(ARILUX_PWM_FREQUENCY);
     pinMode(m_redPin, OUTPUT);
@@ -30,7 +60,7 @@ bool Arilux::init(void) const {
     return true;
 }
 
-bool Arilux::setAll(const float p_red, const float p_green, const float p_blue, const float p_white1, const float p_white2) const {
+bool PwmLeds::setAll(const float p_red, const float p_green, const float p_blue, const float p_white1, const float p_white2) const {
     auto clamp = [](uint16_t in) {
         return in > ARILUX_PWM_MAX_RANGE_VALUE ? ARILUX_PWM_RANGE : in < ARILUX_PWM_MIN_RANGE_VALUE ? 0 : in;
     };

@@ -1,16 +1,11 @@
-#include <unity.h>
+#include <catch2/catch.hpp>
+
 #include <statemachine.h>
 #include <iostream>
+#include "arduinostubs.hpp"
 
-#ifndef millis
-uint32_t millisStubbed = 0;
-uint32_t millis() {
-    return millisStubbed;
-};
-#endif
 
-// Should correctly get current value with simple state machine
-void should_getCurrentAndCorrectlyStop() {
+TEST_CASE( "Should correctly get current value with simple state machine", "[statemachine]" ) {
     State* thirdState;
     State* secondState;
     State* firstState;
@@ -23,22 +18,23 @@ void should_getCurrentAndCorrectlyStop() {
     machine.start();
 
     // Should initially be at the first state
-    TEST_ASSERT_TRUE(machine.current(firstState));
+    REQUIRE(machine.current(firstState) == true);
 
     // then second state
     machine.handle();
-    TEST_ASSERT_TRUE(machine.current(secondState));
+    REQUIRE(machine.current(secondState) == true);
 
     // then third state
     machine.handle();
-    TEST_ASSERT_TRUE(machine.current(thirdState));
+    REQUIRE(machine.current(thirdState) == true);
 
     // well advance and should always end in last state
     machine.handle();
-    TEST_ASSERT_TRUE(machine.current(thirdState));
+    REQUIRE(machine.current(thirdState) == true);
+    REQUIRE(machine.current(secondState) == false);
 }
 
-void should_testsTimedStateSingleRun() {
+TEST_CASE( "Should handle timed states", "[statemachine]" ) {
     State* thirdState;
     State* secondState;
     State* firstState;
@@ -50,28 +46,18 @@ void should_testsTimedStateSingleRun() {
     StateMachine machine(3, states );
     machine.start();
     // Should initially be at the first state
-    TEST_ASSERT_TRUE(machine.current(firstState));
+    REQUIRE(machine.current(firstState) == true);
 
     // then second state
     machine.handle();
-    TEST_ASSERT_TRUE(machine.current(secondState));
+    REQUIRE(machine.current(secondState) == true);
 
     // Still at second state
     machine.handle();
-    TEST_ASSERT_TRUE(machine.current(secondState));
+    REQUIRE(machine.current(secondState) == true);
 
     // should have been advanced to third state
     millisStubbed = 11;
     machine.handle();
-    TEST_ASSERT_TRUE(machine.current(thirdState));
-}
-
-int main(int argc, char **argv) {
-    UNITY_BEGIN();
-    RUN_TEST(should_getCurrentAndCorrectlyStop);
-    RUN_TEST(should_getCurrentAndCorrectlyStop);
-    RUN_TEST(should_testsTimedStateSingleRun);
-    UNITY_END();
-
-    return 0;
+    REQUIRE(machine.current(thirdState) == true);
 }

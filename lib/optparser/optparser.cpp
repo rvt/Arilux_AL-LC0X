@@ -71,7 +71,7 @@ bool OptParser::cleanUp(bool didCleanup, const char m_sep, char* str,  size_t le
         char* p;
         char* s;
 
-        if (str[pos + 1] == '=' || str[pos + 1] == m_sep) {
+        if (str[pos + 1] == '=') {
             p = &str[pos + 0];
             s = &str[pos + 1];
         } else {

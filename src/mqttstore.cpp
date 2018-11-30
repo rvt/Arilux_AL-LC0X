@@ -5,6 +5,10 @@
 
 extern char jsonBuffer[512];
 
+#define STATE_ON                         "ON"
+#define STATE_OFF                        "OFF"
+
+
 MQTTStore::MQTTStore(
     const char* p_baseTopic,
     const char* p_hsbTopic,
