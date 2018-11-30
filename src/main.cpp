@@ -18,6 +18,14 @@
 #include <RCSwitch.h> // https://github.com/sui77/rc-switch
 #endif
 
+#if defined(SSD1306)
+  #include <SSD1306Wire.h>
+  #include <OLEDDisplayUi.h>
+  SSD1306Wire display(0x3c, 5, 4);
+//  OLEDDisplayUi ui ( &display );
+#endif
+
+
 
 #include <ArduinoOTA.h>
 #include <ESP_EEPROM.h>
@@ -67,10 +75,11 @@ boolean coldStartupActive = true;
 
 // Pwm Leds handler
 std::unique_ptr<PwmLeds> pwmLeds(nullptr);
-// 
+//
 std::unique_ptr<ColorControllerService> colorControllerService(nullptr);
 // Command handler
 std::unique_ptr<CmdHandler> cmdHandler(nullptr);
+
 
 #if defined(RF_REMOTE)
 RCSwitch rcSwitch = RCSwitch();
@@ -448,10 +457,10 @@ void setup() {
 
     CONNECTMQTT = new State([](){
         if (mqttClient.connect(
-                properties.get("mqttClientID").getCharPtr(), 
-                MQTT_USER, 
-                MQTT_PASS, 
-                properties.get("mqttLastWillTopic").getCharPtr(), 
+                properties.get("mqttClientID").getCharPtr(),
+                MQTT_USER,
+                MQTT_PASS,
+                properties.get("mqttLastWillTopic").getCharPtr(),
                 0, 1, MQTT_LASTWILL_OFFLINE)) {
             return PUBLISHONLINE;
         }
@@ -465,7 +474,7 @@ void setup() {
 
     PUBLISHONLINE = new State([](){
         publishToMQTT(
-            properties.get("mqttLastWillTopic").getCharPtr(), 
+            properties.get("mqttLastWillTopic").getCharPtr(),
             MQTT_LASTWILL_ONLINE);
         return SUBSCRIBECOMMANDTOPIC;
     });
@@ -525,7 +534,7 @@ void setup() {
         }
     ));
 
-    // Setup Wi-Fi    
+    // Setup Wi-Fi
     setupWiFi(properties);
     startOTA();
 
@@ -604,7 +613,7 @@ void setup() {
 
         memcpy(mqttReceiveBuffer, p_payload, p_length);
         mqttReceiveBuffer[p_length] = 0;
-        
+
         cmdHandler->handle(p_topic, mqttReceiveBuffer, colorControllerService->hsb(), colorControllerService->currentHsb(), transitionCounter);
     });
 
@@ -612,6 +621,21 @@ void setup() {
     bootSequence->start();
 
     Serial.println(F("Setup done:"));
+
+#if defined(SSD1306)
+    display.init();
+    display.setContrast(255);
+    display.displayOn();
+
+    //display.flipScreenVertically();
+   // display.mirrorScreen();
+    display.setFont(ArialMT_Plain_10);
+
+    display.setTextAlignment(TEXT_ALIGN_LEFT);
+    display.setFont(ArialMT_Plain_10);
+    display.drawString(0, 0, "Hello world");
+    display.display();
+#endif
 
     // Avoid running towards millis() when loop starts
     effectPeriodStartMillis = millis();
@@ -642,6 +666,11 @@ void loop() {
             settingsDTO.reset();
         } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
             bootSequence->handle();
+            Serial.println(transitionCounter);
+
+            #if defined(SSD1306)
+                display.display();
+            #endif
         }
 #if defined(ARILUX_DEBUG_TELNET)
         else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
