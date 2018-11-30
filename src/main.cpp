@@ -514,11 +514,25 @@ void setup() {
     cmdHandler.reset(new CmdHandler (
         properties,
         [](bool p) {
-            colorControllerService->power(p);
-            settingsDTO.power(p);
+              // during startup never turn off the device
+            if (!coldStartupActive) {
+              // When we turn on, always ensure we have some brightness
+              if (p) {
+                const HSB onHsb = getOnState(colorControllerService->hsb(), settingsDTO.brightness());
+                colorControllerService->hsb(onHsb);
+              }
+              colorControllerService->power(p);
+              settingsDTO.power(p);
+            }
         },
         [](const HSB& hsb) {
-            colorControllerService->hsb(hsb);
+            if (coldStartupActive) {
+              // during startup follow all changes except make sure we don´t turn off the device
+              const HSB onHsb = getOnState(hsb, settingsDTO.brightness());
+              colorControllerService->hsb(onHsb);
+            } else {
+              colorControllerService->hsb(hsb);
+            }
         },
         [](std::unique_ptr<Filter> filter) {
             colorControllerService->filter(std::move(filter));
