@@ -101,7 +101,7 @@ TEST_CASE( "Should handle variabel strings with spaces", "[optparser]" ) {
             REQUIRE( std::strcmp( f.asChar(), "Some other string" ) == 0 );
             calls++;
         }
-        
+
     });
     REQUIRE(calls == 2);
 }

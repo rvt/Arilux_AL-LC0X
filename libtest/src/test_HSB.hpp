@@ -37,7 +37,7 @@ TEST_CASE( "get HSB values", "[hsb]" ) {
         REQUIRE(hsb.white1() == Approx( 4.0));
         REQUIRE(hsb.white2() == Approx( 5.0));
     }
-    
+
      SECTION( "get HSB as array" ) {
         HSB hsb(1.0, 2.0, 3.0, 4.0, 5.0);
         float colors[3];
@@ -47,8 +47,8 @@ TEST_CASE( "get HSB values", "[hsb]" ) {
         REQUIRE(colors[2] == Approx( 3.0));
     }
 
-}    
-    
+}
+
 TEST_CASE( "get RGB values", "[hsb]" ) {
     SECTION("get RGB with HSB red brightness 100%") {
         float colors[3];
@@ -56,16 +56,16 @@ TEST_CASE( "get RGB values", "[hsb]" ) {
         hsb.constantRGB(colors);
         REQUIRE(colors[0] == Approx(100.0));
         REQUIRE(colors[1] == Approx(0.0));
-        REQUIRE(colors[2] == Approx(0.0));       
+        REQUIRE(colors[2] == Approx(0.0));
     }
 
     SECTION("get RGB with HSB green brightness 50%") {
         float colors[3];
         HSB hsb(120.0, 100.0, 50.0, 0.0, 0.0);
         hsb.constantRGB(colors);
-        REQUIRE(colors[0] == Approx(0.0));    
-        REQUIRE(colors[1] == Approx(50.0));    
-        REQUIRE(colors[2] == Approx(0.0));         
+        REQUIRE(colors[0] == Approx(0.0));
+        REQUIRE(colors[1] == Approx(50.0));
+        REQUIRE(colors[2] == Approx(0.0));
     }
 
     SECTION("get RGB with HSB blue 100% saturation 50%") {
@@ -74,8 +74,7 @@ TEST_CASE( "get RGB values", "[hsb]" ) {
         hsb.constantRGB(colors);
         REQUIRE(colors[0] == Approx(50.0));
         REQUIRE(colors[1] == Approx(50.0));
-        REQUIRE(colors[2] == Approx(100.0));     
+        REQUIRE(colors[2] == Approx(100.0));
     }
 
 }
- 
