@@ -3,7 +3,7 @@
 #include <vector>
 #include "effect.h"
 
-#include <HSB.h>
+#include <hsb.h>
 
 
 class NoEffect final : public Effect {
