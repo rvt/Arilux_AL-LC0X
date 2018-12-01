@@ -25,6 +25,8 @@ set(LIB_SOURCES
     ../lib/lightningutils/basicfilters.cpp
     ../lib/lightningutils/colorcontrollerservice.cpp
     ../lib/utils/propertyutils.cpp
+    ../lib/lightningutils/rainboweffect.cpp
+    ../lib/lightningutils/colorseffect.cpp
 )
 
 set(LIB_HEADERS

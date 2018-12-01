@@ -51,7 +51,7 @@ SCENARIO( "Colorseffect will change based on time", "[colors]" ) {
             THEN( "Color at time 10300 should be 120" ) {
                 HSB hsb = colorseffect.handleEffect(0, 11300, HSB(20.0f, 0.0f,  0.0f,  0.0f,  0.0f));
                 REQUIRE(hsb.hue() == Approx(120.0f));
-            }        
+            }
         }
     }
 
