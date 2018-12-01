@@ -15,4 +15,3 @@
 #include "src/test_utils.hpp"
 #include "src/test_cmdhandler.hpp"
 #include "src/test_colorcontrollerservice.hpp"
-#include "src/test_colorseffect.hpp"

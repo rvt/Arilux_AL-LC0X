@@ -3,35 +3,31 @@
 | [![Build Status](https://travis-ci.org/rvt/Arilux_AL-LC0X.svg?branch=master)](https://travis-ci.org/rvt/Arilux_AL-LC0X)  | [![Build Status](https://travis-ci.org/rvt/Arilux_AL-LC0X.svg?branch=develop)](https://travis-ci.org/rvt/Arilux_AL-LC0X) |
 
 
-# LEDstrip firmware for esp8266 
+# LEDstrip firmware for esp8266/esp8265 devices
 
-This is an alternative version of the [Alternative firmware] for Arilux LED Controllers with a few modifications and enhancements.
-This firmware has been tested with both OpenHAB and just a bit om Home Assistance.
-- In OpenHAB both brightness, color ON/OFF will work because OpenHAB understands both HSB and RGB color model.
-- In Home Assistant brightness and ON/OFF will work. Note: RGB to HSB model needs to be added to the example of Home Assistant, let me know if somebody is really interested. I don´ run HA myself so I have very limited knowledge.
+This is an driver for the popular LED strips using the ESP8266/EPS8265 devices.
+Initially I tested them only on the Arilux devices but they can also work on any other ESP8266/ESP8265 device.
 
-Differences are between the original (from Martenats) firmware:
-- Took the Martenats as my original to get into esp8266, but rewrote it mostly.
+The initial code came from https://github.com/mertenats/Arilux_AL-LC0X but in the mean time it has been completely overhauled.
 
-Enhancements are:
-- Fade from any color to any other color smoothly without apparent brightness changes
-- ON/OFF states will correctly fade and remember the last color (in EEPROM)
-- Easy to make new effects, See Effect.h and some of the including Effects
-- You can send partial updates for the color, for example just can just send he hue, brightness or white values
-- After startup the LED will always turn on as a safety feature (handy if the arilux is behind a switch, mqtt down, wifi down etc..)
-- Solid reconnect to mosquitto 
+This firmware has been tested with OpenHAB and just a bit om Home Assistance.
+
+Features:
+- Fade from any color to any other color smoothly without apparent brightness changes without special commands
+- ON/OFF states will correctly fade in/out and remember the last color (in EEPROM)
+- Easy to make new effects, See effect.h and some of the including Effects
+- You can send partial updates for the color, for example just can just send the hue, brightness or white values
+- After startup the LED will always turn on as a safety feature (handy if the device is behind a switch, mqtt down, wifi down etc..)
+- Solid reconnect to your MQTT broker.
 
 Current effects are:
-- Rainbow: Will keep fading over the rainbow of colors
+- Rainbow: Will keep fading over the rainbow of colors with a given time period
 - Transition: Change from color1 to color2 over a period of time 
 - Flash:  Flash between two colors or between black and the current color
 - Strobe: Strobe between two colors, period can be given
 
 Old functionality to be re-added
 - IR Remote control
-
-Ideas
-- instead of using remote use a config topic to store specific configurations
 
 ## Remote Controle changes
 
@@ -43,24 +39,9 @@ Ideas
 ## Todo
 
  - Configure using some form of web based interface,ard eg, no need to configure for each device using the setup.h file
- - ASync TCP / MQTT client
  - Store and reload the current active Filter in EEPROM/MQTT so the device comes back up correctly after reboot
- - Check if we can use a better way of debugging lines
- - Check travis and see if that still works (never worked with it...sorry)
  
-Tested with the [ESP8266 Wi-Fi chip][esp8266].
-
-
-# Alternative firmware for Arilux LED controllers
-This is an alternative firmware for Arilux LED controllers which uses [MQTT] instead of the default "Magic Home"/"Flux LED" protocol which has numerous reliability problems.
-The LED controller is a cheap product available on sites like Banggood.com, Aliexpress, eBay and even Amazon which can be easily reprogrammed as it is based on the popular [ESP8266 Wi-Fi chip][esp8266].
-The controllers are also known to sell under different manufacturer names such as "Firstd". If the product you bought looks similar to one of the Arilux controllers below, it most likely is.
-
-
-**WARNING: DUE TO A NEW PINOUT, THIS FIRMWARE SEEMS TO BE NOT MORE COMPATIBLE WITH THE NEWEST MODELS (PCB version > 1.4).**
-
-
-![Arilux](images/Arilux.png)
+Tested with the [ESP8266 Wi-Fi chip][esp8266] and Wemos devices.
 
 ## Features
 - Remote control over the MQTT protocol via individual topics
@@ -68,76 +49,17 @@ The controllers are also known to sell under different manufacturer names such a
 - Remote control with the included IR control (uncomment `#define IR_REMOTE` in `config.h`)
 - Remote control with the included RF control (uncomment `#define RF_REMOTE` in `config.h`)
 - TLS support (uncomment `#define TLS` in `setup.h` and change the fingerprint if not using CloudMQTT)
-- Debug printing over Telnet (add `#define ARILUX_DEBUG_TELNET` in `setup.h`)
 - ArduinoOTA support for over-the-air firmware updates
-- Native support for Home Assistant, including MQTT discovery (to be tested again).
+- Native support for OpenHAB and should work with Home Assistant with MQTT
 
-## Supported devices
-| Model | Color Support | Voltages | Remote | Price | Link                      |
-|-------|---------------|----------|--------|-------|---------------------------|
-| LC01  | RGB           | 5-28V    | None   | ~$8   | [Banggood][LC01-banggood] |
-| LC02  | RGBW          | 9-12V    | None   | ~$11  | [Banggood][LC02-banggood] |
-| LC03  | RGB           | 5-28V    | IR     | ~$12  | [Banggood][LC03-banggood] |
-| LC04  | RGBW          | 9-12V    | IR     | ~$13  | [Banggood][LC04-banggood] |
-| LC08  | RGBWW         | 5-28V    | None   | ~$12  | [Banggood][LC08-banggood] |
-| LC09  | RGB           | 5-28V    | RF     | ~$12  | [Banggood][LC09-banggood] |
-| LC10  | RGBW          | 9-28V    | RF     | ~$14  | [Banggood][LC10-banggood] |
-| LC11  | RGBWW         | 9-28V    | RF     | ~$15  | [Banggood][LC11-banggood] |
-
-## Demonstration
-
-[![Arilux AL-LC03 + IR + MQTT + Home Assistant](images/Youtube.png)](https://www.youtube.com/watch?v=IKh0inaLvAU "Arilux AL-LC03 + IR + MQTT + Home Assistant")
-
-## Flash the firmware
-Whichever flashing option you choose, ensure your Arduino IDE settings match the following:
 
 ### Configuration
 You must copy `setup.example.h` to `setup.h` and change settings to match your environment before flashing.
 Within the config.h file there are more options you can override.
 
-### Settings for the Arduino IDE
-
-| Parameter       | Value                    |
-| ----------------|--------------------------|
-| Board           | Generic ESP8266 Module   |
-| Flash Mode      | DIO                      |
-| Flash Frequency | 40 MHz                   |
-| Upload Using    | Serial                   |
-| CPU Frequency   | 80 MHz                   |
-| Flash Size      | 1M (64K SPIFFS)          |
-| Reset Method    | ck                       |
-| Upload Speed    | 115200                   |
-| Port            | COMX, /dev/ttyUSB0, etc. |
-
-*Note: If you own a board labeled 1.4 or the board isn't booting, use the DOUT mode instead of the DIO mode to flash the firmware*
-
-### Option 1
-#### Schematic
-| Arilux | Left FTDI         | Right FTDI |
-|--------|-------------------|------------|
-| VCC    | VCC (set to 3.3V) |            |
-| RX     |                   | TX         |
-| TX     |                   | RX         |
-| GPIO0  | GND               |            |
-| GND    |                   | GND        |
-
-Note: To enter in programming mode, you need to pull GPIO0 LOW while powering the board via the FTDI. It's not possible to reprogram the module without soldering the wire to the ESP8266 module.
-If you are unable or don't know how to solder try option 2 below which can be accomplished without soldering.
-
-The FTDI from the left gives power and it's connected to an USB charger (VCC, GND). The FTDI from the right is connected to the computer and is used to reprogram the ESP8266 (RX, TX, GND).
-
-![ESP-12F Layout](images/ESP12-F_pinout3.jpg)
-
-![Layout](images/Layout.JPG)
-
-### Option 2
-Using the following image, connect RX, TX and GND of a single FTDI to the shown pins on the underside of the board. Plug in the wall power supply and flash using the above settings.
-It helps to have another person able to plug in the device and start the upload while you hold the pins.
-
-![Option 2 Layout](images/option2.jpg)
-
 ## Updating
-OTA is enabled on this firmware. Assuming the device is plugged in you should find the device as a Port option in the Arduino IDE. Make sure you are using the settings listed above.
+OTA is enabled on this firmware. Assuming the device is plugged in you should find the device using
+```platformio device list --mdns --logical | grep arduino```
 
 ## Control
 ### IR
@@ -422,9 +344,6 @@ File: ``sitemaps/default.sitemap``
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
-## Home Assistant Community Discussion Forum
-For further information and to join the discussion for this firmware [check out this thread] on the Home Assistant Community Discussion Forum.
-
 ## Contributors
 - [@mertenats]: Initial creator of the project, documention and code
 - [@KmanOz]: Codes for the RF remote (Arilux AL-LC09)
@@ -437,16 +356,7 @@ For further information and to join the discussion for this firmware [check out 
 [@DanGunvald]: https://github.com/DanGunvald
 [@robbiet480]: https://github.com/robbiet480
 [MQTT Last Will and Testament]: http://www.hivemq.com/blog/mqtt-essentials-part-9-last-will-and-testament
-[LC01-banggood]: http://www.banggood.com/ARILUX-AL-LC01-Super-Mini-LED-WIFI-Smart-RGB-Controller-For-RGB-LED-Strip-Light-DC-9-12V-p-1058603.html?rmmds=search
-[LC02-banggood]: http://www.banggood.com/ARILUX-AL-LC02-Super-Mini-LED-WIFI-APP-Controller-Dimmer-for-RGBW-LED-Strip-Light-DC-9-12V-p-1060222.html
-[LC03-banggood]: http://www.banggood.com/ARILUX-AL-LC03-Super-Mini-LED-WIFI-APP-Controller-Remote-Control-For-RGB-LED-Strip-DC-9-12V-p-1060223.html
-[LC04-banggood]: http://www.banggood.com/ARILUX-AL-LC04-Super-Mini-LED-WIFI-APP-Controller-Remote-Control-For-RGBW-LED-Strip-DC-9-12V-p-1060231.html
-[LC08-banggood]: http://www.banggood.com/ARILUX-AL-LC08-Super-Mini-LED-WIFI-APP-Controller-Dimmer-for-RGBWW-LED-Strip-Light-DC-5-28V-p-1081241.html
-[LC09-banggood]: http://www.banggood.com/ARILUX-AL-LC09-Super-Mini-LED-WIFI-APP-Controller-RF-Remote-Control-For-RGB-LED-Strip-DC9-28V-p-1081344.html
-[LC10-banggood]: http://www.banggood.com/ARILUX-AL-LC10-Super-Mini-LED-WIFI-APP-Controller-RF-Remote-Control-For-RGBW-LED-Strip-DC9-28V-p-1085111.html
-[LC11-banggood]: http://www.banggood.com/ARILUX-AL-LC11-Super-Mini-LED-WIFI-APP-Controller-RF-Remote-Control-For-RGBWW-LED-Strip-DC9-28V-p-1085112.html
 [esp8266]: https://en.wikipedia.org/wiki/ESP8266
 [Home Assistant's MQTT discovery functionality]: https://home-assistant.io/docs/mqtt/discovery/
-[check out this thread]: https://community.home-assistant.io/t/alternative-firmware-for-arilux-al-lc03-for-use-with-mqtt-and-home-assistant-rgb-light-strip-controller/6328/16
 [MQTT]: http://mqtt.org/
 [Alternative firmware]: https://github.com/mertenats/Arilux_AL-LC0X 
