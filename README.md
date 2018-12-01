@@ -302,8 +302,6 @@ The below config will also allow you to say to Siri when Homekit is configured o
  - ``Turn off Arilux``
  - etc...
 
-Most simple configuration would be as follows:
-UPDATE: I have new scripts, let m know if I should post them
 
 File: ``items/default.items``
 ```
@@ -333,6 +331,8 @@ File: ``sitemaps/default.sitemap``
         Colorpicker item=Item_Arilux_Color label="Color" icon="colorwheel"
     }
 ```
+
+Look at the directory openhab for more instructions and ready to use scripts and configurations.
 
 
 ## Licence
