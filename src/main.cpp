@@ -196,6 +196,14 @@ HSB getOnState(const HSB& hsb, float brightness) {
     }
 }
 
+/**
+ * Send a command to the cmdHandler
+ */
+void handleCmd(const char* topic, const char* cmd) {
+    cmdHandler->handle(topic, cmd, colorControllerService->hsb(), colorControllerService->currentHsb(), transitionCounter);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 //  WiFi
 ///////////////////////////////////////////////////////////////////////////
@@ -236,92 +244,91 @@ void handleRFRemote(void) {
 
         switch (value) {
             case ARILUX_REMOTE_KEY_BRIGHT_PLUS:
-                brightnessFilter.increase();
+               // brightnessFilter.increase();
                 break;
 
             case ARILUX_REMOTE_KEY_BRIGHT_MINUS:
-                brightnessFilter.decrease();
+               // brightnessFilter.decrease();
                 break;
 
             case ARILUX_REMOTE_KEY_OFF:
-                settingsDTO.power(false);
-                colorControllerService->power(false);
+                handleCmd("/color", "OFF");
                 break;
 
             case ARILUX_REMOTE_KEY_ON:
-                settingsDTO.power(true);
-                colorControllerService->power(true);
+                handleCmd("/color", "ON");
                 break;
 
             case ARILUX_REMOTE_KEY_RED:
-                workingHsb = HSB(0, 255 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=0 s=100");
                 break;
 
             case ARILUX_REMOTE_KEY_GREEN:
-                workingHsb = HSB(120, 255 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=120 s=100");
                 break;
 
             case ARILUX_REMOTE_KEY_BLUE:
-                workingHsb = HSB(240, 255 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=240 s=100");
                 break;
 
             case ARILUX_REMOTE_KEY_WHITE:
-                workingHsb = HSB(0, 0, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "s=0");
                 break;
 
             case ARILUX_REMOTE_KEY_ORANGE:
-                workingHsb = HSB(25, 255 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=25 s=100");
                 break;
 
             case ARILUX_REMOTE_KEY_LTGRN:
-                workingHsb = HSB(120, 100 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=120 s=90");
                 break;
 
             case ARILUX_REMOTE_KEY_LTBLUE:
-                workingHsb = HSB(240, 100 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=240 s=90");
                 break;
 
             case ARILUX_REMOTE_KEY_AMBER:
-                workingHsb = HSB(49, 255 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=49 s=100");
                 break;
 
             case ARILUX_REMOTE_KEY_CYAN:
-                workingHsb = HSB(180, 255 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=180 s=100");
                 break;
 
             case ARILUX_REMOTE_KEY_PURPLE:
-                workingHsb = HSB(300, 255 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=300 s=100");
                 break;
 
             case ARILUX_REMOTE_KEY_YELLOW:
-                workingHsb = HSB(60, 255 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=60 s=100");
                 break;
 
             case ARILUX_REMOTE_KEY_PINK:
-                workingHsb = HSB(350, 64 * 4, workingHsb.brightness(), 0, 0);
+                handleCmd("/color", "h=350 s=90");
                 break;
 
             case ARILUX_REMOTE_KEY_TOGGLE:
-                workingHsb = currentEffect->finalState(transitionCounter, millis(), workingHsb);
-                currentEffect.reset(new NoEffect());
+//                currentEffect.reset(new NoEffect());
                 break;
 
             case ARILUX_REMOTE_KEY_SPEED_PLUS:
                 // TODO: Implement some incremantal speedup filter
-                workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() + 5, 360.f)).build();
+  //              workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() + 5, 360.f)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_SPEED_MINUS:
                 // TODO: Implement some incremantal speedup filter
-                workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() - 5, 360.f)).build();
+  //              workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() - 5, 360.f)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_MODE_PLUS:
-                workingHsb = workingHsb.toBuilder().saturation(Helpers::between(workingHsb.saturation() + 5, 0.f, 100.f)).build();
+ //               auto hsb = colorControllerService->hsb()
+ //               workingHsb = workingHsb.toBuilder().saturation(Helpers::between(workingHsb.saturation() + 5, 0.f, 100.f)).build();
                 break;
 
             case ARILUX_REMOTE_KEY_MODE_MINUS:
-                workingHsb = workingHsb.toBuilder().saturation(Helpers::between(workingHsb.saturation() - 5, 0.f, 100.f)).build();
+//                auto hsb = colorControllerService->hsb()
+//                workingHsb = workingHsb.toBuilder().saturation(Helpers::between(workingHsb.saturation() - 5, 0.f, 100.f)).build();
                 break;
 
             default:
@@ -431,6 +438,7 @@ void startOTA() {
 ///////////////////////////////////////////////////////////////////////////
 //  SETUP() AND LOOP()
 ///////////////////////////////////////////////////////////////////////////
+
 
 void setup() {
     // setup Strings
@@ -627,8 +635,7 @@ void setup() {
 
         memcpy(mqttReceiveBuffer, p_payload, p_length);
         mqttReceiveBuffer[p_length] = 0;
-
-        cmdHandler->handle(p_topic, mqttReceiveBuffer, colorControllerService->hsb(), colorControllerService->currentHsb(), transitionCounter);
+        handleCmd(p_topic, mqttReceiveBuffer);
     });
 
     // Start boot sequence
@@ -691,13 +698,6 @@ void loop() {
             // Handle Telnet connection for debugging
             handleTelnet();
         }
-#endif
-#if defined(IR_REMOTE)
-        else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
-            // Handle received IR codes from the remote
-            handleIRRemote();
-        }
-
 #endif
 #if defined(RF_REMOTE)
         else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
