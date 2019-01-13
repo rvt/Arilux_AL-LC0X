@@ -1,6 +1,6 @@
 | Master | Develop |
 |-------|----------|
-| [![Build Status](https://travis-ci.org/rvt/Arilux_AL-LC0X.svg?branch=master)](https://travis-ci.org/rvt/Arilux_AL-LC0X)  | [![Build Status](https://travis-ci.org/rvt/Arilux_AL-LC0X.svg?branch=develop)](https://travis-ci.org/rvt/Arilux_AL-LC0X) |
+| [![Build Status](https://travis-ci.org/rvt/esp8266leds.svg?branch=master)](https://travis-ci.org/rvt/esp8266leds)  | [![Build Status](https://travis-ci.org/rvt/esp8266leds.svg?branch=develop)](https://travis-ci.org/rvt/esp8266leds) |
 
 
 # LEDstrip firmware for esp8266/esp8265 devices
