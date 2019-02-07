@@ -24,13 +24,13 @@ MQTTStore::MQTTStore(
     m_stateInColorTopic(p_stateInColorTopic) {
 }
 
-void MQTTStore::save(const SettingsDTO& settings) {
+void MQTTStore::save(const SettingsDTOData& settings) {
     storeHsb(settings);
     storeRemoteBase(settings);
     storePower(settings);
 }
 
-void MQTTStore::storeHsb(const SettingsDTO& settings) {
+void MQTTStore::storeHsb(const SettingsDTOData& settings) {
     char payloadBuffer[64];
     const HSB hsb = settings.hsb();
     sprintf(payloadBuffer, "hsb=%.2f,%.2f,%.2f,%.2f,%.2f",
@@ -42,20 +42,19 @@ void MQTTStore::storeHsb(const SettingsDTO& settings) {
            );
 
     if (m_stateInColorTopic) {
-        sprintf(payloadBuffer + strlen(payloadBuffer), " state=%s", settings.power() ? STATE_ON : STATE_OFF);
+        sprintf(payloadBuffer + strlen(payloadBuffer), " state=%s", settings.power ? STATE_ON : STATE_OFF);
     }
-
     publish(m_baseTopic, m_hsbTopic, payloadBuffer);
 }
 
-void MQTTStore::storeRemoteBase(const SettingsDTO& settings) {
+void MQTTStore::storeRemoteBase(const SettingsDTOData& settings) {
     char payloadBuffer[16];
-    sprintf(payloadBuffer, "%d", settings.remoteBase());
+    sprintf(payloadBuffer, "%d", settings.remoteBase);
     publish(m_baseTopic, m_remoteBaseTopic, payloadBuffer);
 }
 
-void MQTTStore::storePower(const SettingsDTO& settings) {
-    publish(m_baseTopic, m_stateTopic, settings.power() ? STATE_ON : STATE_OFF);
+void MQTTStore::storePower(const SettingsDTOData& settings) {
+    publish(m_baseTopic, m_stateTopic, settings.power ? STATE_ON : STATE_OFF);
 
     if (m_stateInColorTopic) {
         storeHsb(settings);

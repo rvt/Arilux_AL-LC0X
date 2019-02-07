@@ -1,57 +1,79 @@
 #pragma once
 
 #include <stdint.h>
+#include <cstring>
 #include <hsb.h>
 
-#define SETTINGS_PROPERTY(typeIn,name) \
-    private: \
-    typeIn m_##name; \
-    typeIn l_##name; \
-    public: \
-    typeIn name() const {return m_##name;} \
-    void name(const typeIn& value){m_##name = value;}
+struct SettingsDTOData  {
+    float m_hue=0;
+    float m_saturation=0;
+    float m_brightness=50;
+    float m_white1=0;
+    float m_white2=0;
+     uint32_t remoteBase=0;
+     uint8_t filter=0;
+     bool power=true;
+     float brightness=50.0f;
+
+    bool operator==(const  SettingsDTOData& rhs) {
+        return
+            m_hue == rhs.m_hue &&
+            m_saturation == rhs.m_saturation &&
+            m_brightness == rhs.m_brightness &&
+            m_white1 == rhs.m_white1 &&
+            m_white2 == rhs.m_white2 &&
+            remoteBase == rhs.remoteBase &&
+            filter == rhs.filter &&
+            power == rhs.power &&
+            brightness == rhs.brightness;
+    }
+
+    bool operator!=(const SettingsDTOData& rhs) {
+        return !(*this == rhs);
+    }
+
+    const HSB hsb() const {
+        return HSB(m_hue, m_saturation, m_brightness, m_white1, m_white2);
+    }
+    void hsb(const HSB &hsb) {
+        m_hue = hsb.hue();
+        m_saturation = hsb.saturation();
+        m_brightness = hsb.brightness();
+        m_white1 = hsb.white1();
+        m_white2 = hsb.white2();
+    }
+};
 
 
 class SettingsDTO final {
+private:
+    SettingsDTOData m_data;
+    SettingsDTOData l_data;
+public:
 
-    SETTINGS_PROPERTY(HSB, hsb)
-    SETTINGS_PROPERTY(uint32_t, remoteBase)
-    SETTINGS_PROPERTY(uint8_t, filter)
-    SETTINGS_PROPERTY(bool, power)
-    SETTINGS_PROPERTY(float, brightness)
 
 public:
-    SettingsDTO(const HSB& p_hsb,
-                         const uint32_t p_remoteBase,
-                         const uint8_t p_filter,
-                         const bool p_power,
-                         const float p_brightness) :
-    m_hsb(p_hsb),l_hsb(p_hsb),
-    m_remoteBase(p_remoteBase),l_remoteBase(p_remoteBase),
-    m_filter(p_filter),l_filter(p_filter),
-    m_power(p_power),l_power(p_power),
-    m_brightness(l_brightness),l_brightness(p_brightness) {
+    SettingsDTO(const SettingsDTOData& data) :
+        m_data(data),
+        l_data(data) {
+    }
+    SettingsDTO() {
     }
 
-    SettingsDTO() : SettingsDTO(HSB(0, 0, 50, 0, 0), 0, 0, true, 50) {
+    bool modified()  {
+        return m_data != l_data;
     }
 
+    SettingsDTOData* data() {
+        return &m_data;
+    }
 
-    bool modified() const {
-        return l_hsb != m_hsb ||
-        l_remoteBase != m_remoteBase ||
-        l_filter != m_filter ||
-        l_power != m_power ||
-        l_brightness != m_brightness;
+    void data(const SettingsDTOData& data) {
+        memcpy(&m_data, &data, sizeof(data));
     }
 
     void reset() {
-        l_hsb = m_hsb;
-        l_remoteBase = m_remoteBase;
-        l_filter = m_filter;
-        l_power = m_power;
-        l_brightness = m_brightness;
+        memcpy(&l_data, &m_data, sizeof(m_data));
     }
 
 };
-

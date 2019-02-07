@@ -9,7 +9,7 @@ public:
     typedef std::function<const bool (void)> ModifiedFunction;
 private:
     const uint32_t m_debounceWaitTime;
-    const uint32_t m_minWaitCommitTime; 
+    const uint32_t m_minWaitCommitTime;
     uint32_t m_startCommitTime;
     uint32_t m_startDebounceTime;
     bool m_modifiedLatch;
@@ -24,5 +24,3 @@ public:
     void save();
     void save(bool force);
 };
-
-

@@ -14,7 +14,7 @@ public:
     virtual HSB handleEffect(const uint32_t p_count,
                              const uint32_t p_time,
                              const HSB& p_hsb) const = 0;
-
+    virtual ~Effect() = default;
     /*
        * Should return true of the effect has been complated
        */

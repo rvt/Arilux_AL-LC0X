@@ -17,26 +17,24 @@ ADD_DEFINITIONS(-DUNIT_TEST)
 
 set(LIB_SOURCES
     ../lib/hsb/hsb.cpp
-    ../lib/optparser/optparser.cpp
     ../lib/settings/settings.cpp
-    ../lib/statemachine/statemachine.cpp
     ../lib/lightningutils/cmdhandler.cpp
     ../lib/lightningutils/basiceffects.cpp
     ../lib/lightningutils/basicfilters.cpp
     ../lib/lightningutils/colorcontrollerservice.cpp
     ../lib/utils/propertyutils.cpp
+    ../.piolibdeps/opt-parser/src/optparser.cpp
 )
 
 set(LIB_HEADERS
     ../lib/hsb
-    ../lib/optparser
     ../lib/settings
-    ../lib/statemachine
     ../lib/lightningutils
     ../lib/command
     ../lib/libhelpers
     ../lib/utils
     ../lib/helpers
+    ../.piolibdeps/opt-parser/src
 )
 
 include_directories(catch2 ${LIB_HEADERS})

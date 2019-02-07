@@ -20,12 +20,12 @@ public:
         const PubSubClient& p_mqttClient,
         const bool p_stateInColorTopic);
 
-        void save(const SettingsDTO& settings);
+        void save(const SettingsDTOData& settings);
 
 private:
 
-    void storeHsb(const SettingsDTO& settings);
-    void storeRemoteBase(const SettingsDTO& settings);
-    void storePower(const SettingsDTO& settings);
+    void storeHsb(const SettingsDTOData& settings);
+    void storeRemoteBase(const SettingsDTOData& settings);
+    void storePower(const SettingsDTOData& settings);
     void publish(const char* baseTopic, const char* topic, const char* payload);
 };
