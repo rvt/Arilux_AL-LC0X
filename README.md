@@ -352,6 +352,7 @@ Look at the directory openhab for more instructions and ready to use scripts and
 
 *If you like the content of this repo, please add a star! Thank you!*
 
+[@StefanBruens]: https://github.com/StefanBruens/ESP8266_new_pwm
 [@KmanOz]: https://github.com/KmanOz
 [@DanGunvald]: https://github.com/DanGunvald
 [@robbiet480]: https://github.com/robbiet480
@@ -360,3 +361,8 @@ Look at the directory openhab for more instructions and ready to use scripts and
 [Home Assistant's MQTT discovery functionality]: https://home-assistant.io/docs/mqtt/discovery/
 [MQTT]: http://mqtt.org/
 [Alternative firmware]: https://github.com/mertenats/Arilux_AL-LC0X 
+
+# Gamma correction
+https://learn.adafruit.com/led-tricks-gamma-correction/the-longer-fix
+
+# 

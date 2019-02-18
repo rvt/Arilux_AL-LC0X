@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-
+#include "leds.h"
 
 
 /*
@@ -93,7 +93,7 @@
 #define ARILUX_REMOTE_KEY_WHITE (REMOTE_CODE + 0x15)
 #endif
 
-class PwmLeds {
+class PwmLeds :public Leds {
 private:
     const uint8_t m_redPin;
     const uint8_t m_greenPin;
@@ -104,6 +104,6 @@ private:
 public:
     PwmLeds(const uint8_t red_pin, const uint8_t green_pin, const uint8_t blue_pin, const uint8_t white1_pin, const uint8_t white2_pin);
     bool init(void) const;
-    bool setAll(const float p_red, const float p_green, const float p_blue, const float p_white1, const float p_white2) const;
+    virtual bool setAll(const float p_red, const float p_green, const float p_blue, const float p_white1, const float p_white2) const;
 
 };

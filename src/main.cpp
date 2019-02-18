@@ -23,6 +23,7 @@
 #include <ESP_EEPROM.h>
 
 #include "pwmleds.h"
+// #include "newpwmleds.h"
 #include "colorcontrollerservice.h"
 #include <hsb.h>
 
@@ -65,7 +66,7 @@ volatile boolean receiveRFCodeFromRemote = true;
 boolean coldStartupActive = true;
 
 // Pwm Leds handler
-std::unique_ptr<PwmLeds> pwmLeds(nullptr);
+std::unique_ptr<Leds> pwmLeds(nullptr);
 //
 std::unique_ptr<ColorControllerService> colorControllerService(nullptr);
 // Command handler
@@ -649,7 +650,7 @@ void loop() {
             settingsDTO->reset();
         } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
             bootSequence->handle();
-            Serial.println(transitionCounter);
+            //Serial.println(transitionCounter);
         }
 #if defined(ARILUX_DEBUG_TELNET)
         else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
