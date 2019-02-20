@@ -20,7 +20,7 @@ public:
         const PubSubClient& p_mqttClient,
         const bool p_stateInColorTopic);
 
-        void save(const SettingsDTOData& settings);
+    void save(const SettingsDTOData& settings);
 
 private:
 

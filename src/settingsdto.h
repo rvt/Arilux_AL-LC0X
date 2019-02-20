@@ -5,15 +5,15 @@
 #include <hsb.h>
 
 struct SettingsDTOData  {
-    float m_hue=0;
-    float m_saturation=0;
-    float m_brightness=50;
-    float m_white1=0;
-    float m_white2=0;
-     uint32_t remoteBase=0;
-     uint8_t filter=0;
-     bool power=true;
-     float brightness=50.0f;
+    float m_hue = 0;
+    float m_saturation = 0;
+    float m_brightness = 50;
+    float m_white1 = 0;
+    float m_white2 = 0;
+    uint32_t remoteBase = 0;
+    uint8_t filter = 0;
+    bool power = true;
+    float brightness = 50.0f;
 
     bool operator==(const  SettingsDTOData& rhs) {
         return
@@ -35,7 +35,7 @@ struct SettingsDTOData  {
     const HSB hsb() const {
         return HSB(m_hue, m_saturation, m_brightness, m_white1, m_white2);
     }
-    void hsb(const HSB &hsb) {
+    void hsb(const HSB& hsb) {
         m_hue = hsb.hue();
         m_saturation = hsb.saturation();
         m_brightness = hsb.brightness();

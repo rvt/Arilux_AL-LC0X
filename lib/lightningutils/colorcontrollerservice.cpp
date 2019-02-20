@@ -3,15 +3,15 @@
 #include <basicfilters.h>
 
 #ifndef UNIT_TEST
-    #include <Arduino.h>
+#include <Arduino.h>
 #else
-    extern "C" uint32_t millis();
+extern "C" uint32_t millis();
 #endif
 
 #define FILTER_FADING_ALPHA         0.1f
 
 
-ColorControllerService::ColorControllerService( const HSB & hsb, UpdateFunction p_updateFunction) : 
+ColorControllerService::ColorControllerService(const HSB& hsb, UpdateFunction p_updateFunction) :
     m_updateFunction(p_updateFunction),
     m_brightnessFilter(std::unique_ptr<BrightnessFilter>(new BrightnessFilter(25))),
     m_powerFilter(std::unique_ptr<PowerFilter>(new PowerFilter(true))),
@@ -38,11 +38,11 @@ void ColorControllerService::handle(uint32_t transitionCounter) {
 }
 
 void ColorControllerService::effect(std::unique_ptr<Effect> p_effect) {
-   m_currentEffect.swap(p_effect);
+    m_currentEffect.swap(p_effect);
 }
 
-void ColorControllerService::filter( std::unique_ptr<Filter> p_filter) {
-   m_currentFilter.swap(p_filter);
+void ColorControllerService::filter(std::unique_ptr<Filter> p_filter) {
+    m_currentFilter.swap(p_filter);
 }
 
 void ColorControllerService::power(bool onoff) {

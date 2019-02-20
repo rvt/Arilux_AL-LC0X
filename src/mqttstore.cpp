@@ -44,6 +44,7 @@ void MQTTStore::storeHsb(const SettingsDTOData& settings) {
     if (m_stateInColorTopic) {
         sprintf(payloadBuffer + strlen(payloadBuffer), " state=%s", settings.power ? STATE_ON : STATE_OFF);
     }
+
     publish(m_baseTopic, m_hsbTopic, payloadBuffer);
 }
 

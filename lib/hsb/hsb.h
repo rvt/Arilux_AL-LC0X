@@ -43,6 +43,7 @@ public:
     template<typename T>
     static T hueShortestPath(T fromHue, T toHue) {
         const T distance = toHue - fromHue;
+
         if (distance > -180 && distance <= 180) {
             return toHue;
         } else {

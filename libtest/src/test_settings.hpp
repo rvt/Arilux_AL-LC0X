@@ -4,125 +4,135 @@
 #include <settings.h>
 #include "arduinostubs.hpp"
 
-TEST_CASE( "Should check for modifications", "[settings]" ) {
+TEST_CASE("Should check for modifications", "[settings]") {
     millisStubbed = 0;
     bool calledModified = false;
     Settings settings(
         200,
-        1000, 
-        []() {},
-        [&calledModified]() {calledModified = true;return false;}
+        1000,
+    []() {},
+    [&calledModified]() {
+        calledModified = true;
+        return false;
+    }
     );
-
     REQUIRE(calledModified == false);
-    settings.handle();        
+    settings.handle();
     REQUIRE(calledModified == true);
-
 }
 
-TEST_CASE( "Should never call save function when not modified", "[settings]" ) {
+TEST_CASE("Should never call save function when not modified", "[settings]") {
     millisStubbed = 0;
     bool calledSaved = false;
     Settings settings(
         200,
-        1000, 
-        [&calledSaved]() {calledSaved=true;},
-        []() {return false;}
+        1000,
+    [&calledSaved]() {
+        calledSaved = true;
+    },
+    []() {
+        return false;
+    }
     );
 
     // Repeated calls to handle test with timings
-    for (int i=0;i<2000;i+=100) {
-        millisStubbed=i;
-        settings.handle();        
+    for (int i = 0; i < 2000; i += 100) {
+        millisStubbed = i;
+        settings.handle();
         REQUIRE(calledSaved == false);
     }
 }
 
-TEST_CASE( "Should call save after debounce", "[settings]" ) {
-     millisStubbed = 0;
+TEST_CASE("Should call save after debounce", "[settings]") {
+    millisStubbed = 0;
     bool modified = false;
     bool calledSaved = false;
     Settings settings(
         200,
-        1000, 
-        [&calledSaved]() {calledSaved=true;},
-        [&modified]() {return modified;}
+        1000,
+    [&calledSaved]() {
+        calledSaved = true;
+    },
+    [&modified]() {
+        return modified;
+    }
     );
-
-    settings.handle();       
-
+    settings.handle();
     // Modified at 195ms
-    modified = true; 
-    millisStubbed=195;
-    settings.handle();       
-    REQUIRE(calledSaved == false);
-    modified = false; 
-
-    // at 200 debounce is over and should save 
-    millisStubbed=200;
-    settings.handle();
-    REQUIRE(calledSaved == true);
-    calledSaved=false;
-
-    // At 500ms modified again, should not save
-    modified = true; 
-    millisStubbed=500;
+    modified = true;
+    millisStubbed = 195;
     settings.handle();
     REQUIRE(calledSaved == false);
-    modified = false; 
-
-    // at 800ms still modified, but we wait for min wait time
-    modified = true; 
-    millisStubbed=800;
-    settings.handle();
-    REQUIRE(calledSaved == false);
-    modified = false; 
-
-    // at 1200ms we will save as min wait time is over
-    millisStubbed=1200;
+    modified = false;
+    // at 200 debounce is over and should save
+    millisStubbed = 200;
     settings.handle();
     REQUIRE(calledSaved == true);
     calledSaved = false;
-
-    // try againmin wait time
-    modified = true; 
-    millisStubbed=1600;
-    settings.handle();
-    modified = false;
-    millisStubbed=2000;
+    // At 500ms modified again, should not save
+    modified = true;
+    millisStubbed = 500;
     settings.handle();
     REQUIRE(calledSaved == false);
-    millisStubbed=2200;
+    modified = false;
+    // at 800ms still modified, but we wait for min wait time
+    modified = true;
+    millisStubbed = 800;
+    settings.handle();
+    REQUIRE(calledSaved == false);
+    modified = false;
+    // at 1200ms we will save as min wait time is over
+    millisStubbed = 1200;
+    settings.handle();
+    REQUIRE(calledSaved == true);
+    calledSaved = false;
+    // try againmin wait time
+    modified = true;
+    millisStubbed = 1600;
+    settings.handle();
+    modified = false;
+    millisStubbed = 2000;
+    settings.handle();
+    REQUIRE(calledSaved == false);
+    millisStubbed = 2200;
     settings.handle();
     REQUIRE(calledSaved == true);
 }
 
-TEST_CASE( "Should call save when we force", "[settings]" ) {
-        millisStubbed = 0;
+TEST_CASE("Should call save when we force", "[settings]") {
+    millisStubbed = 0;
     bool calledSaved = false;
     Settings settings(
         200,
-        1000, 
-        [&calledSaved]() {calledSaved = true;},
-        []() {return false;}
+        1000,
+    [&calledSaved]() {
+        calledSaved = true;
+    },
+    []() {
+        return false;
+    }
     );
-
     REQUIRE(calledSaved == false);
-    settings.save(true);        
+    settings.save(true);
     REQUIRE(calledSaved == true);
 }
 
-void show_showMinWaitTimeInAction(){
+void show_showMinWaitTimeInAction() {
     millisStubbed = 0;
     bool calledSaved = false;
     Settings settings(
         1,
-        1000, 
-        [&calledSaved]() {std::cerr << " saved";},
-        [&calledSaved]() {calledSaved=false;return true;}
+        1000,
+    [&calledSaved]() {
+        std::cerr << " saved";
+    },
+    [&calledSaved]() {
+        calledSaved = false;
+        return true;
+    }
     );
 
-    for (int i=0;i<10000;i+=50) {
+    for (int i = 0; i < 10000; i += 50) {
         std::cerr << i;
         millisStubbed = i;
         settings.handle();

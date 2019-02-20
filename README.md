@@ -13,20 +13,24 @@ The initial code came from https://github.com/mertenats/Arilux_AL-LC0X but in th
 This firmware has been tested with OpenHAB and just a bit om Home Assistance.
 
 Features:
+
 - Fade from any color to any other color smoothly without apparent brightness changes without special commands
 - ON/OFF states will correctly fade in/out and remember the last color (in EEPROM)
 - Easy to make new effects, See effect.h and some of the including Effects
 - You can send partial updates for the color, for example just can just send the hue, brightness or white values
 - After startup the LED will always turn on as a safety feature (handy if the device is behind a switch, mqtt down, wifi down etc..)
 - Solid reconnect to your MQTT broker.
+- Uses Stefan Bruens PWM library for much finer grained contol, currently supporting 5000 levels of brightness per channel!!
 
 Current effects are:
+
 - Rainbow: Will keep fading over the rainbow of colors with a given time period
 - Transition: Change from color1 to color2 over a period of time 
 - Flash:  Flash between two colors or between black and the current color
 - Strobe: Strobe between two colors, period can be given
 
 Old functionality to be re-added
+
 - IR Remote control
 
 ## Remote Controle changes
@@ -34,7 +38,6 @@ Old functionality to be re-added
 - Remote control Speed + and - will change through colors
 - Remote control Mode + and - changes saturation
 - Remote control toggle stops the current effect
-
 
 ## Todo
 
@@ -44,6 +47,7 @@ Old functionality to be re-added
 Tested with the [ESP8266 Wi-Fi chip][esp8266] and Wemos devices.
 
 ## Features
+
 - Remote control over the MQTT protocol via individual topics
 - Supports transitions, flashing and other effects
 - Remote control with the included IR control (uncomment `#define IR_REMOTE` in `config.h`)
@@ -54,18 +58,22 @@ Tested with the [ESP8266 Wi-Fi chip][esp8266] and Wemos devices.
 
 
 ### Configuration
+
 You must copy `setup.example.h` to `setup.h` and change settings to match your environment before flashing.
 Within the config.h file there are more options you can override.
 
 ## Updating
+
 OTA is enabled on this firmware. Assuming the device is plugged in you should find the device using
 ```platformio device list --mdns --logical | grep arduino```
 
 ## Control
 ### IR
+
 TODO
 
 ### RF
+
 The LED controller can be controlled with the RF remote included with the Arilux AL-LC09, AL-LC10 and AL-LC11. 
 The `S+` and `S-` buttons can be used to change the color. The `M+` and `M-` buttons can be used to change the saturation. Brightness buttons work as usual.
 
@@ -74,41 +82,44 @@ your arilux device. The pairing will be stored in EEPROM and send over MQTT.
 
 ### MQTT
 
+State and control is send and received through MQTT
+
 ## Filter vs Effect
 
 ### Effect
+
 An effect will set the color, effects are usually based on timings like flashing leds, strobe or
 slow fades. Only one effect can be active at a time.
 
 ### Filter
+
 A filter will take the output of a effect and apply an additional transformation. THis can include
 color correct and/or fading the HSB to create smooth transitions between colors. Only one filter
 can be active at a time. NOTE: List of filter is on my todo..
 
 ### Boot Sequence
+
 For savety reasons we want to turn the lights on regardless of any settings,
 for this reason the firmware provides a specific boot sequence to guarantee this.
 
 Bootsequence is done by prioritising where the initial light status come from and will insuring 
 that during boot the lights will always be on with the last set hue and saturation value.
 
+#### Bootorder:
 
-Bootorder:
-
-* Load default settings
-* Get HSB values from EEPROM and turn on LED with these values immediatly
-* Subscribe state topic for two seconds, use any found settings over a period of two seconds
-* Subscribe to command topic and overwrite any settings found in state over a period of two seconds
+- Load default settings
+- Get HSB values from EEPROM and turn on LED with these values immediatly
+- Subscribe state topic for two seconds, use any found settings over a period of two seconds
+- Subscribe to command topic and overwrite any settings found in state over a period of two seconds
 
 Considarations:
 
-* After bootsequence the device will always be on in the last configured color setting
-* If no wifi and/or mqtt server found we load up color from EEPROM 
-* When EEPROM is empty we load up a brightness of 50
-* When EEPROM has stored brightness of 0 we load up a brightness of minimum 5
+- After bootsequence the device will always be on in the last configured color setting
+- If no wifi and/or mqtt server found we load up color from EEPROM 
+- When EEPROM is empty we load up a brightness of 50
+- When EEPROM has stored brightness of 0 we load up a brightness of minimum 5
 
-
-#### Control 
+#### Control Codes and examples
 
 1. We use individual topics to take advantage of retain and other features MQTT has to offer
    If you are have Home Assistant MQTT Discovery enabled, the `light.mqtt_json` platform will be loaded by Home Assistant instead of the `light.mqtt` platform.
@@ -259,15 +270,18 @@ This allows for instant setup and use of your device without requiring any manua
 If you are using the MQTT JSON mode, the `light.mqtt_json` platform will be loaded. Otherwise, the `light.mqtt` platform will load. `light.mqtt_json` is required for full functionality.
 There are a few one time steps that you need to take to get this working.
 
-1. Add `discovery: true` to your `mqtt` configuration in Home Assistant, if it isn't there already.
-2. Uncomment the `HOME_ASSISTANT_MQTT_DISCOVERY` definitions in your `config.h` file.
+- Add `discovery: true` to your `mqtt` configuration in Home Assistant, if it isn't there already.
+- Uncomment the `HOME_ASSISTANT_MQTT_DISCOVERY` definitions in your `config.h` file.
   - You can change the discovery prefix (default is `homeassistant`) by changing `HOME_ASSISTANT_MQTT_DISCOVERY_PREFIX`.
     Make sure this matches your Home Assistant MQTT configuration.
-3. Upload the firmware once more after making the previous changes.
+- Upload the firmware once more after making the previous changes.
 
 From now on your device will announce itself to Home Assistant with all of the proper configuration information.
 
 ### Configuration for Home Assistant
+
+*Untested*
+
 configuration.yaml
 ```yaml
 mqtt:
@@ -297,21 +311,24 @@ You can use this device to connect to OpenHAB 2 with MQTT configured. Make sure 
 and both OpenHAB and your light are connecting to the same MQTT broker.
 
 The below config will also allow you to say to Siri when Homekit is configured on OpenHAB: 
- - ``Set Arilux to Red``
- - ``Set briightness of Arilux to fifty percent``
- - ``Turn off Arilux``
- - etc...
 
+- ``Set Arilux to Red``
+- ``Set briightness of Arilux to fifty percent``
+- ``Turn off Arilux``
+- etc...
 
 File: ``items/default.items``
+
 ```
 Color  Item_Arilux_Color "Arilux" <light> ["Lighting"] {mqtt="<[mosquitto:RGB(W|WW)/<chipid>/color/state:state:JS(ariluxhsbToHsb.js)],>[mosquitto:RGB(W|WW)/<chipid>/color:command:*:default]"}
 ```
+
 This will receive updates and send them to the correct mqtt topic.
 
 A transformation to turns the device created payload to something OpenHAB can understand.
 Essentially take out the HSB value from the color state and return that to OpenHAB.
 File: ``transform/ariluxhsbToHsb.js``
+
 ```
 (function(i){
     if (i.indexOf('OFF') !== -1) return 'OFF';
@@ -326,6 +343,7 @@ File: ``transform/ariluxhsbToHsb.js``
 
 Adding a color picker to the default sitemap.
 File: ``sitemaps/default.sitemap``
+
 ```
     Frame label="Arilux" {
         Colorpicker item=Item_Arilux_Color label="Color" icon="colorwheel"
@@ -334,17 +352,34 @@ File: ``sitemaps/default.sitemap``
 
 Look at the directory openhab for more instructions and ready to use scripts and configurations.
 
-
 ## Licence
-> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-  SOFTWARE.
+
+MIT License
+
+Copyright (c) 2016 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+You Must credit the author and link to this repository if you implement any of his work.
 
 ## Contributors
+
 - [@mertenats]: Initial creator of the project, documention and code
 - [@KmanOz]: Codes for the RF remote (Arilux AL-LC09)
 - [@DanGunvald]: RGBW/RGBWW support
@@ -364,5 +399,3 @@ Look at the directory openhab for more instructions and ready to use scripts and
 
 # Gamma correction
 https://learn.adafruit.com/led-tricks-gamma-correction/the-longer-fix
-
-# 

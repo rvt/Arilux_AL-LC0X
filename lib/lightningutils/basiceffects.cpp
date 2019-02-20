@@ -2,9 +2,9 @@
 #include <hsb.h>
 
 #ifndef UNIT_TEST
-    #include <Arduino.h>
+#include <Arduino.h>
 #else
-    extern "C" uint32_t millis();
+extern "C" uint32_t millis();
 #endif
 
 NoEffect::NoEffect() : Effect() {
@@ -31,18 +31,19 @@ ColorsEffect::ColorsEffect(const std::vector<float> p_colors, uint32_t p_duratio
 }
 
 HSB ColorsEffect::handleEffect(const uint32_t p_count,
-                                const uint32_t p_time,
-                                const HSB& p_hsb) const {
+                               const uint32_t p_time,
+                               const HSB& p_hsb) const {
     if (m_colors.size() == 0) {
         return p_hsb;
     }
-    const uint8_t item = ((p_time-m_startTime) / m_durationPerColor) % m_colors.size();                                    
+
+    const uint8_t item = ((p_time - m_startTime) / m_durationPerColor) % m_colors.size();
     return p_hsb.toBuilder().hue(m_colors.at(item)).build();
 }
 
 HSB ColorsEffect::finalState(const uint32_t p_count,
-                              const uint32_t p_time,
-                              const HSB& p_hsb) const {
+                             const uint32_t p_time,
+                             const HSB& p_hsb) const {
     return p_hsb;
 }
 
@@ -105,8 +106,8 @@ HSB RainbowEffect::finalState(const uint32_t p_count,
 
 HSB RainbowEffect::calculateHsb(const uint32_t p_time, const HSB& hsb) const {
     // rotationSec will count up to 360 in one second
-    float rotationSec = ((float)(p_time-m_startTime)) * (360.f / 1000.f);
-    float hue = fmod( rotationSec / m_secPerRotation + m_startHue, 360.f);
+    float rotationSec = ((float)(p_time - m_startTime)) * (360.f / 1000.f);
+    float hue = fmod(rotationSec / m_secPerRotation + m_startHue, 360.f);
     return HSB(hue, hsb.saturation(), hsb.brightness(), hsb.white1(), hsb.white2());
 }
 
@@ -144,15 +145,10 @@ HSB TransitionEffect::calcHSB(const uint32_t p_count,
                               const HSB& p_hsb) const {
     const float percent = ((p_time - m_startMillis) * 100) / m_duration;
     const float m_hsbsPath = HSB::hueShortestPath(p_hsb.hue(), m_hsb.hue());
-
-    auto fmap = [](float x, float in_min, float in_max, float out_min, float out_max)
-    {
+    auto fmap = [](float x, float in_min, float in_max, float out_min, float out_max) {
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     };
-
     const float newHue = fmap(percent, 0.f, 100.f, p_hsb.hue(), m_hsbsPath);
-
-
     return HSB(
                HSB::fixHue(newHue),
                fmap(percent, 0.f, 100.f, p_hsb.saturation(), m_hsb.saturation()),

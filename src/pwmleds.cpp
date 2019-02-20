@@ -5,12 +5,6 @@
 // PWM Range
 #define ARILUX_PWM_RANGE 2047
 
-// Value at which we set to max AND MIN PWM range using
-// n > ARILUX_PWM_MAX_RANGE_VALUE ? ARILUX_PWM_RANGE : in < ARILUX_PWM_MIN_RANGE_VALUE ? 0 : in;
-
-#define ARILUX_PWM_MAX_RANGE_VALUE 2047
-#define ARILUX_PWM_MIN_RANGE_VALUE 0
-
 // Ranges on which we maximum set each PWM channel
 // This can be used as a cheap calibration (curveless)
 // or to reduce power output to each LED
@@ -33,16 +27,20 @@
 #define ARILUX_PWM_FREQUENCY 225
 
 PwmLeds::PwmLeds(const uint8_t red_pin,
-        const uint8_t green_pin,
-        const uint8_t blue_pin,
-        const uint8_t white1_pin,
-        const uint8_t white2_pin) :
+                 const uint8_t green_pin,
+                 const uint8_t blue_pin,
+                 const uint8_t white1_pin,
+                 const uint8_t white2_pin) :
     m_redPin(red_pin),
     m_greenPin(green_pin),
     m_bluePin(blue_pin),
     m_white1Pin(white1_pin),
-    m_white2Pin(white2_pin)
-{
+    m_white2Pin(white2_pin),
+    m_lastRed(0.0f),
+    m_lastGreen(0.0f),
+    m_lastBlue(0.0f),
+    m_lastWhite1(0.0f),
+    m_lastWhite2(0.0f) {
 }
 
 bool PwmLeds::init(void) const {
@@ -51,30 +49,51 @@ bool PwmLeds::init(void) const {
     pinMode(m_redPin, OUTPUT);
     pinMode(m_greenPin, OUTPUT);
     pinMode(m_bluePin, OUTPUT);
-    if (m_white1Pin!=0) {
+
+    if (m_white1Pin != 0) {
         pinMode(m_white1Pin, OUTPUT);
     }
-    if (m_white2Pin!=0) {
+
+    if (m_white2Pin != 0) {
         pinMode(m_white2Pin, OUTPUT);
     }
+
+    setAll(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     return true;
 }
 
 bool PwmLeds::setAll(const float p_red, const float p_green, const float p_blue, const float p_white1, const float p_white2) const {
+    // Don´t update the PWN if the changes are relative small
+    // Mostly helpfull when there are no changes at all
+    /*
+    if (fabs(m_lastRed - p_red) < 0.01 &&
+        fabs(m_lastGreen - p_green) < 0.01 &&
+        fabs(m_lastBlue - p_blue) < 0.01 &&
+        fabs(m_lastWhite1 - p_white1) < 0.01 &&
+        fabs(m_lastWhite2 - p_white2) < 0.01) {
+        return false;
+    }
 
-    auto fmap = [](float x, float in_min, float in_max, float out_min, float out_max)
-    {
+    m_lastRed = p_red;
+    m_lastGreen = p_green;
+    m_lastBlue = p_blue;
+    m_lastWhite1 = p_white1;
+    m_lastWhite2 = p_white2;
+    */
+    auto fmap = [](float x, float in_min, float in_max, float out_min, float out_max) {
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     };
-
     analogWrite(m_redPin, fmap(p_red, 0.f, 100.f, 0.f, ARILUX_RED_PWM_RANGE));
     analogWrite(m_greenPin, fmap(p_green, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE));
     analogWrite(m_bluePin, fmap(p_blue, 0.f, 100.f, 0.f, ARILUX_BLUE_PWM_RANGE));
-    if (m_white1Pin!=0) {
+
+    if (m_white1Pin != 0) {
         analogWrite(m_white1Pin, fmap(p_white1, 0.f, 100.f, 0.f, ARILUX_WHITE1_PWM_RANGE));
     }
-    if (m_white2Pin!=0) {
+
+    if (m_white2Pin != 0) {
         analogWrite(m_white2Pin, fmap(p_white2, 0.f, 100.f, 0.f, ARILUX_WHITE2_PWM_RANGE));
     }
+
     return true;
 }

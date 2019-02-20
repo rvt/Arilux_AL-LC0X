@@ -6,7 +6,7 @@
 #include "cmdhandler.h"
 #include "effect.h"
 #include "filter.h"
-#include "basicfilters.h" 
+#include "basicfilters.h"
 #include "basiceffects.h"
 #include <optparser.h>
 #include <helpers.h>
@@ -42,9 +42,9 @@
 #define STATE_OFF                        "OFF"
 
 #ifndef UNIT_TEST
-    #include <Arduino.h>
+#include <Arduino.h>
 #else
-    extern "C" uint32_t millis();
+extern "C" uint32_t millis();
 #endif
 
 // std::ostream& operator << ( std::ostream& os, HSB const& value ) {
@@ -54,19 +54,19 @@
 
 
 CmdHandler::CmdHandler(
-            const Properties& properties,
-            FPower p_fPower,
-            FHsb p_fHsb,
-            FFilter p_fFilter,
-            FEffect p_fEffect,
-            FRemoteBase p_fRemoteBase,
-            FRestart p_fRestart) :
-            m_fPower(p_fPower), 
-            m_fHsb(p_fHsb), 
-            m_fFilter(p_fFilter), 
-            m_fEffect(p_fEffect), 
-            m_fRemoteBase(p_fRemoteBase),
-            m_fRestart(p_fRestart)  {
+    const Properties& properties,
+    FPower p_fPower,
+    FHsb p_fHsb,
+    FFilter p_fFilter,
+    FEffect p_fEffect,
+    FRemoteBase p_fRemoteBase,
+    FRestart p_fRestart) :
+    m_fPower(p_fPower),
+    m_fHsb(p_fHsb),
+    m_fFilter(p_fFilter),
+    m_fEffect(p_fEffect),
+    m_fRemoteBase(p_fRemoteBase),
+    m_fRestart(p_fRestart)  {
     m_mqttSubscriberTopicStrLength = properties.get("mqttSubscriberTopicStrLength").getLong();
 }
 /*
@@ -78,6 +78,7 @@ CmdHandler::CmdHandler(
 void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p_setHsb, const HSB& p_currentHsb, uint32_t transitionCounter) {
     // Mem copy into own buffer, I am not sure if p_payload is null terminated
     auto payloadlength = strlen(p_payload);
+
     if (payloadlength >= sizeof(m_mqttReceiveBuffer)) {
         return;
     }
@@ -93,7 +94,6 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
     if (strstr(topicPos, COLOR_TOPIC) != nullptr) {
         const HSB workingHsb = hsbFromString(p_setHsb, m_mqttReceiveBuffer);
         m_fHsb(workingHsb);
-
         OptParser::get(m_mqttReceiveBuffer, [&](OptValue v) {
             if (strcmp(v.asChar(), STATE_ON) == 0) {
                 m_fPower(true);
@@ -124,14 +124,13 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
         }
     } else if (strstr(topicPos, REMOTE_TOPIC) != nullptr) {
         const uint32_t base = atol(m_mqttReceiveBuffer);
-            m_fRemoteBase(base);
+        m_fRemoteBase(base);
     }
 
     // We absolutly never want to process any messages below here during bootup
     // as they might have odd and unwanted side effects
     if (strstr(topicPos, EFFECT_TOPIC) != 0) {
         const HSB workingHsb = hsbFromString(p_setHsb, m_mqttReceiveBuffer);
-
         // Get variables from payload
         const char* name;
         int16_t pulse = -1;
@@ -160,7 +159,7 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
         if (strcmp(name, EFFECT_NONE) == 0) {
             m_fEffect(std::move(std::unique_ptr<Effect>(new NoEffect())));
         } else if (strcmp(name, EFFECT_RAINBOW) == 0) {
-            if (duration>0) {
+            if (duration > 0) {
                 m_fEffect(std::move(std::unique_ptr<Effect>(new RainbowEffect(p_currentHsb.hue(), duration, millis()))));
             } else {
                 m_fEffect(std::move(std::unique_ptr<Effect>(new RainbowEffect(millis()))));
@@ -193,7 +192,7 @@ HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data) {
     b = hsb.brightness();
     w1 = hsb.white1();
     w2 = hsb.white2();
-    OptParser::get(data, [&h, &s, &b, &w1, &w2](OptValue f) {    
+    OptParser::get(data, [&h, &s, &b, &w1, &w2](OptValue f) {
         if (strcmp(f.key(), "hsb")  == 0 || strstr(f.key(), ",") != nullptr) {
             OptParser::get(f.asChar(), ",", [&h, &s, &b, &w1, &w2](OptValue c) {
                 switch (c.pos()) {

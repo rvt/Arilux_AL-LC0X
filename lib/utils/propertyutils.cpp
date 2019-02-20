@@ -60,6 +60,7 @@ void PropertyValue::copy(const PropertyValue& value) {
             m_char = strdup(value.m_char);
             break;
     }
+
     m_type = value.m_type;
 }
 
@@ -104,6 +105,7 @@ int32_t PropertyValue::asLong() const {
         case Type::CHARPTR:
             return round(std::atof(m_char));
             break;
+
         default:
             return 0;
     }
@@ -123,6 +125,7 @@ float PropertyValue::asFloat() const {
         case Type::CHARPTR:
             return std::atof(m_char);
             break;
+
         default:
             return 0.0f;
     }
@@ -131,7 +134,7 @@ float PropertyValue::asFloat() const {
 bool PropertyValue::asBool() const {
     switch (m_type) {
         case Type::LONG:
-            return m_long!=0;
+            return m_long != 0;
 
         case Type::FLOAT:
             return m_float != 0.0f;
@@ -142,8 +145,9 @@ bool PropertyValue::asBool() const {
         case Type::CHARPTR:
             return PropertyValue::boolProperty(m_char).getBool();
             break;
+
         default:
-           return false;
+            return false;
     }
 }
 

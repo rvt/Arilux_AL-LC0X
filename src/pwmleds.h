@@ -93,7 +93,11 @@
 #define ARILUX_REMOTE_KEY_WHITE (REMOTE_CODE + 0x15)
 #endif
 
-class PwmLeds :public Leds {
+/**
+ * PWM LEDS using Standard Arduino methods
+ */
+
+class PwmLeds : public Leds {
 private:
     const uint8_t m_redPin;
     const uint8_t m_greenPin;
@@ -101,6 +105,11 @@ private:
     const uint8_t m_white1Pin;
     const uint8_t m_white2Pin;
 
+    mutable float m_lastRed;
+    mutable float m_lastGreen;
+    mutable float m_lastBlue;
+    mutable float m_lastWhite1;
+    mutable float m_lastWhite2;
 public:
     PwmLeds(const uint8_t red_pin, const uint8_t green_pin, const uint8_t blue_pin, const uint8_t white1_pin, const uint8_t white2_pin);
     bool init(void) const;

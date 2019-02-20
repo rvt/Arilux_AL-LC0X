@@ -79,7 +79,7 @@ HSB BrightnessFilter::handleFilter(const uint32_t p_count,
     } else if (m_increase == -1) {
         m_brightness = - m_increaseBy;
     } else {
-      m_brightness = 0;
+        m_brightness = 0;
     }
 
     m_increase = 0;

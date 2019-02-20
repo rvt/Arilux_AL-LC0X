@@ -31,7 +31,7 @@ public:
     PropertyValue(const PropertyValue& val);
     PropertyValue& operator=(const PropertyValue& val);
 
-    void copy(const PropertyValue &);
+    void copy(const PropertyValue&);
     void destroy();
 
 
@@ -65,13 +65,13 @@ public:
      */
     float asFloat() const;
 
-     /**
-     * Get the bool value from any type
-     * float: returns false when value was 0.0f
-     * bool: value itself
-     * char: uses PropertyValue::boolProperty(m_char).getBool();
-     * long: 0 for false
-     */
+    /**
+    * Get the bool value from any type
+    * float: returns false when value was 0.0f
+    * bool: value itself
+    * char: uses PropertyValue::boolProperty(m_char).getBool();
+    * long: 0 for false
+    */
     bool asBool() const;
 };
 
