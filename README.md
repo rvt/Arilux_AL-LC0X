@@ -12,7 +12,7 @@ The initial code came from https://github.com/mertenats/Arilux_AL-LC0X but in th
 
 This firmware has been tested with OpenHAB and just a bit om Home Assistance.
 
-Features:
+## Features:
 
 - Fade from any color to any other color smoothly without apparent brightness changes without special commands
 - ON/OFF states will correctly fade in/out and remember the last color (in EEPROM)
@@ -20,9 +20,16 @@ Features:
 - You can send partial updates for the color, for example just can just send the hue, brightness or white values
 - After startup the LED will always turn on as a safety feature (handy if the device is behind a switch, mqtt down, wifi down etc..)
 - Solid reconnect to your MQTT broker.
-- Uses Stefan Bruens PWM library for much finer grained contol, currently supporting 5000 levels of brightness per channel!!
+- Uses Stefan Bruens PWM library for much finer grained controll, currently supporting 5000 levels of brightness per channel!!
+- Remote control over the MQTT protocol via individual topics
+- Supports transitions, flashing and other effects
+- Remote control with the included IR control (uncomment `#define IR_REMOTE` in `config.h`)
+- Remote control with the included RF control (uncomment `#define RF_REMOTE` in `config.h`)
+- TLS support (uncomment `#define TLS` in `setup.h` and change the fingerprint if not using CloudMQTT)
+- ArduinoOTA support for over-the-air firmware updates
+- Native support for OpenHAB and should work with Home Assistant with MQTT
 
-Current effects are:
+### Current effects are:
 
 - Rainbow: Will keep fading over the rainbow of colors with a given time period
 - Transition: Change from color1 to color2 over a period of time 
@@ -46,15 +53,6 @@ Old functionality to be re-added
  
 Tested with the [ESP8266 Wi-Fi chip][esp8266] and Wemos devices.
 
-## Features
-
-- Remote control over the MQTT protocol via individual topics
-- Supports transitions, flashing and other effects
-- Remote control with the included IR control (uncomment `#define IR_REMOTE` in `config.h`)
-- Remote control with the included RF control (uncomment `#define RF_REMOTE` in `config.h`)
-- TLS support (uncomment `#define TLS` in `setup.h` and change the fingerprint if not using CloudMQTT)
-- ArduinoOTA support for over-the-air firmware updates
-- Native support for OpenHAB and should work with Home Assistant with MQTT
 
 
 ### Configuration
@@ -133,6 +131,15 @@ Considarations:
    | `hsb`            | hsb=int,float,float,float,float   | hsb=0,100,100,20,30          | Set Hue, Saturation and Brightness white1 and white 2 with assignment   |
    | `seperate`       | h=int s=float b=float w1=float w2=float | h=0 s=100 w1=25 w2=100 | Set as separate assignments  |
    | `combined`       | hsb=int,float,float b=float         | hsb=0,100,100 b=25     | Wil take brightness as 25  |
+
+   ##### Example
+   ```
+   mosquitto_pub -t "RGBW/001F162E/color" -m 'hsb=0,100,100,0,0' # Set Color to Red
+   mosquitto_pub -t "RGBW/001F162E/color" -m 'h=120' # Set Color to green with current brightness and saturation
+   mosquitto_pub -t "RGBW/001F162E/color" -m 'OFF' # Turn lights off (remember brightness)
+   mosquitto_pub -t "RGBW/001F162E/color" -m 'ON' # Turn lights on with last remembered brightness but ensures at least a minimum brightness is used(remember brightness)
+   mosquitto_pub -t "RGBW/001F162E/color" -m 'b=0.1 ON' # Turn lights with brightness to 0.1
+   ```
 
 
    ## Available Filters

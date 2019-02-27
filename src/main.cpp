@@ -63,7 +63,7 @@ volatile uint32_t effectPeriodStartMillis = 0;
 volatile boolean receiveRFCodeFromRemote = true;
 
 // Set to true during cold startup
-boolean coldStartupActive = true;
+volatile boolean coldStartupActive = true;
 
 // Pwm Leds handler
 std::unique_ptr<Leds> pwmLeds(nullptr);
@@ -485,7 +485,7 @@ void setup() {
     Serial.println(properties.get("mqttClientID").getCharPtr());
     cmdHandler.reset(new CmdHandler(
                          properties,
-    [](bool p) {
+    [](bool p, bool brighnessAtPowerChange) {
         // during startup never turn off the device
         if (!coldStartupActive) {
             colorControllerService->power(p);
@@ -527,7 +527,6 @@ void setup() {
     NewPwmLeds* leds = new NewPwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN);
     leds->init();
     pwmLeds.reset(leds);
-    
     // Setup Wi-Fi
     setupWiFi(properties);
     startOTA();

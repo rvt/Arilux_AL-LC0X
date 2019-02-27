@@ -86,14 +86,12 @@ HSB BrightnessFilter::handleFilter(const uint32_t p_count,
     float brightness = _hsb.brightness() + _hsb.brightness() / 100.f * m_brightness;
     float white1 = _hsb.white1() + _hsb.white1() / 100.f * m_brightness;
     float white2 = _hsb.white2() + _hsb.white2() / 100.f * m_brightness;
-
     // Don´t allow to turn off with brightness controls
     // This has the side effect that we cannot turn on or if we do we don´t
     // know anymore what leds where on.
-    if (white1 < 10.f && white2 < 10.f && brightness < 10.f) {
-        return _hsb;
-    }
-
+    // if (white1 < 10.f && white2 < 10.f && brightness < 10.f) {
+    //     return _hsb;
+    // }
     return _hsb.toBuilder()
            .white1(Helpers::between(white1, 0.f, 100.f))
            .white2(Helpers::between(white2, 0.f, 100.f))
@@ -125,10 +123,14 @@ bool PowerFilter::power() const {
 HSB PowerFilter::handleFilter(const uint32_t p_count,
                               const uint32_t p_time,
                               const HSB& _hsb) {
-    return _hsb.toBuilder()
-           .white1(m_power ? _hsb.white1() : 0.f)
-           .white2(m_power ? _hsb.white2() : 0.f)
-           .brightness(m_power ? _hsb.brightness() : 0.f)
-           .build();
+    if (m_power) {
+        return _hsb;
+    }  else {
+        return _hsb.toBuilder()
+               .white1(0.f)
+               .white2(0.f)
+               .brightness(0.f)
+               .build();
+    }
 }
 

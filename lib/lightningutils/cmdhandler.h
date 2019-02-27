@@ -9,7 +9,7 @@
 
 class CmdHandler {
 public:
-    typedef std::function<void(bool power)> FPower;
+    typedef std::function<void(bool power, bool brighnessAtPowerChange)> FPower;
     typedef std::function<void(const HSB&)> FHsb;
     typedef std::function<void(std::unique_ptr<Filter>)> FFilter;
     typedef std::function<void(std::unique_ptr<Effect>)> FEffect;
