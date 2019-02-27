@@ -63,13 +63,15 @@ TEST_CASE("Commands can be parser", "[CmdHandler]") {
     HSB testHsb(0, 0, 0, 0, 0);
     bool restarted = false;
     bool power = false;
+    bool bChanged = false;
     uint32_t baseAddress = 0;
     Effect* effect = nullptr;
     Filter* filter = nullptr;
     CmdHandler cmdHandler(
         properties,
-    [&power](bool p) {
+    [&power, &bChanged](bool p, bool ps) {
         power = p;
+        bChanged = ps;
     },
     [&testHsb](const HSB & hsb) {
         testHsb = hsb;
@@ -91,7 +93,15 @@ TEST_CASE("Commands can be parser", "[CmdHandler]") {
         REQUIRE(power == false);
         cmdHandler.handle(BASE_TOPIC "/color", "hsb=80,81,82 ON", HSB(1, 2, 3, 4, 5), HSB(11, 12, 13, 14, 15), 0);
         REQUIRE(power == true);
+        REQUIRE(bChanged == true);
         REQUIRE(testHsb == HSB(80, 81, 82, 4, 5));
+    }
+    SECTION("should not set bChanged") {
+        REQUIRE(power == false);
+        cmdHandler.handle(BASE_TOPIC "/color", "ON", HSB(1, 2, 0, 4, 5), HSB(11, 12, 13, 14, 15), 0);
+        REQUIRE(power == true);
+        REQUIRE(bChanged == false);
+        REQUIRE(testHsb == HSB(1, 2, 0, 4, 5));
     }
     SECTION("should set power") {
         REQUIRE(power == false);

@@ -98,9 +98,9 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
         // If ON/OFF are used within the color topic
         OptParser::get(m_mqttReceiveBuffer, [&](OptValue v) {
             if (strcmp(v.asChar(), STATE_ON) == 0) {
-                m_fPower(true, b == p_setHsb.brightness());
+                m_fPower(true, b != workingHsb.brightness());
             } else if (strcmp(v.asChar(), STATE_OFF) == 0) {
-                m_fPower(false, b == p_setHsb.brightness());
+                m_fPower(false, b != workingHsb.brightness());
             }
         });
     }
