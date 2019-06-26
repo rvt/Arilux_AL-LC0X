@@ -9,7 +9,7 @@
 
 class CmdHandler {
 public:
-    typedef std::function<void(bool power, bool brighnessAtPowerChange)> FPower;
+    typedef std::function<void(bool power, bool processOnState)> FPower;
     typedef std::function<void(const HSB&)> FHsb;
     typedef std::function<void(std::unique_ptr<Filter>)> FFilter;
     typedef std::function<void(std::unique_ptr<Effect>)> FEffect;
@@ -39,5 +39,5 @@ public:
               );
 
     void handle(const char* p_topic, const char* p_payload, const HSB& p_setHsb, const HSB& p_currentHsb, uint32_t transitionCounter);
-    static HSB hsbFromString(const HSB& hsb, const char* data);
+    static HSB hsbFromString(const HSB& hsb, const char* data, bool* brightnessSet);
 };

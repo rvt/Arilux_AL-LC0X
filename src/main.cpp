@@ -466,6 +466,8 @@ void setup() {
     });
     WAITFORCOMMANDCAPTURE = new StateTimed(3000, []() {
         coldStartupActive = false;
+        // Always force save to update mqtt after re-connection
+        mqttSaveHandler.save(true);
         return 2;
     });
     bootSequence.reset(new StateMachine({
@@ -483,13 +485,20 @@ void setup() {
     Serial.println(F("Starting"));
     Serial.println(F("Hostname: "));
     Serial.println(properties.get("mqttClientID").getCharPtr());
+
     cmdHandler.reset(new CmdHandler(
                          properties,
-    [](bool p, bool brighnessAtPowerChange) {
+    [](bool power, bool processOnState) {
         // during startup never turn off the device
         if (!coldStartupActive) {
-            colorControllerService->power(p);
-            settingsDTO->data()->power = p;
+            colorControllerService->power(power);
+            settingsDTO->data()->power = power;
+
+            if (power && processOnState) {
+                const HSB hsb = getOnState(colorControllerService->hsb(), settingsDTO->data()->brightness);
+                colorControllerService->hsb(hsb);
+                settingsDTO->data()->hsb(hsb);
+            }
         }
     },
     [](const HSB & hsb) {
@@ -500,33 +509,29 @@ void setup() {
             setHsb = getOnState(setHsb, settingsDTO->data()->brightness);
         }
 
-        settingsDTO->data()->hsb(setHsb);
-
-        // Store brightness only if it´s >= STARTUP_MIN_BRIGHTNESS
+        // Store brightness only if it´s >= 1.0f
         // We will use the brightness during startup and ON/OFF cycles
-        if (setHsb.brightness() >= STARTUP_MIN_BRIGHTNESS) {
+        if (setHsb.brightness() >= 1.0f) {
             settingsDTO->data()->brightness = setHsb.brightness();
         }
 
+        settingsDTO->data()->hsb(setHsb);
         colorControllerService->hsb(setHsb);
     },
-    [](std::unique_ptr<Filter> filter) {
-        colorControllerService->filter(std::move(filter));
-    },
-    [](std::unique_ptr<Effect> effect) {
-        colorControllerService->effect(std::move(effect));
-    },
-    [](const uint32_t base) {
-        settingsDTO->data()->remoteBase = base;
-    },
-    []() {
-        ESP.restart();
-    }
-                     ));
-    //pwmLeds.reset(new PwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN));
-    NewPwmLeds* leds = new NewPwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN);
-    leds->init();
-    pwmLeds.reset(leds);
+        [](std::unique_ptr<Filter> filter) {
+            colorControllerService->filter(std::move(filter));
+        },
+        [](std::unique_ptr<Effect> effect) {
+            colorControllerService->effect(std::move(effect));
+        },
+        [](const uint32_t base) {
+            settingsDTO->data()->remoteBase = base;
+        },
+        []() {
+            ESP.restart();
+        }
+    ));
+
     // Setup Wi-Fi
     setupWiFi(properties);
     startOTA();
@@ -542,6 +547,11 @@ void setup() {
     } while (i < 750);
 
 #endif
+    //pwmLeds.reset(new PwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN));
+    NewPwmLeds* leds = new NewPwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN);
+    leds->init();
+    pwmLeds.reset(leds);
+
     // load the data from EEPROM or use it's default
     EEPROM.begin(CRCEEProm::size(*settingsDTO->data()));
     SettingsDTOData data;
@@ -555,6 +565,10 @@ void setup() {
         settingsDTO.reset(new SettingsDTO());
     }
 
+    if (settingsDTO->data()->brightness < STARTUP_MIN_BRIGHTNESS) {
+        settingsDTO->data()->brightness = STARTUP_MIN_BRIGHTNESS;
+    }
+
     const HSB startHsb = getOnState(settingsDTO->data()->hsb(), settingsDTO->data()->brightness);
     // Enable colorController service (handles filters and effects)
     colorControllerService.reset(new ColorControllerService(startHsb, [](const HSB & currentHsb) {
@@ -562,9 +576,11 @@ void setup() {
         currentHsb.constantRGB(colors);
         pwmLeds->setAll(colors[0], colors[1], colors[2], currentHsb.cwhite1(), currentHsb.cwhite2());
     }));
+
     // Ensure we turn with some brightness on the device after we bootup
     settingsDTO->data()->power = true;
     colorControllerService->power(true);
+
     // Enable the MQTT Store
     mqttStore.reset(new MQTTStore(
                         properties.get("mqttTopicPrefix").getCharPtr(),

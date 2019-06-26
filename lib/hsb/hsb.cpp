@@ -87,12 +87,9 @@ void HSB::constantRGB(float colors[]) const {
     r_temp = (r_temp * m_saturation_mod) + inverse_sat;
     g_temp = (g_temp * m_saturation_mod) + inverse_sat;
     b_temp = (b_temp * m_saturation_mod) + inverse_sat;
-    r_temp = (r_temp * m_brightness_mod);
-    g_temp = (g_temp * m_brightness_mod);
-    b_temp = (b_temp * m_brightness_mod);
-    colors[0] = r_temp;
-    colors[1] = g_temp;
-    colors[2] = b_temp;
+    colors[0] = (r_temp * m_brightness_mod);
+    colors[1] = (g_temp * m_brightness_mod);
+    colors[2] = (b_temp * m_brightness_mod);
 }
 
 bool HSB::operator ==(const HSB& rhs) const {

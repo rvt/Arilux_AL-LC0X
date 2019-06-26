@@ -92,15 +92,17 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
     // we use strcmp if we just want to handle command topics
 
     if (strstr(topicPos, COLOR_TOPIC) != nullptr) {
-        const float b = p_setHsb.brightness();
-        const HSB workingHsb = hsbFromString(p_setHsb, m_mqttReceiveBuffer);
+        bool brightnessSet;
+        const HSB workingHsb = hsbFromString(p_setHsb, m_mqttReceiveBuffer, &brightnessSet);
+
         m_fHsb(workingHsb);
+
         // If ON/OFF are used within the color topic
         OptParser::get(m_mqttReceiveBuffer, [&](OptValue v) {
             if (strcmp(v.asChar(), STATE_ON) == 0) {
-                m_fPower(true, b != workingHsb.brightness());
+                m_fPower(true, !brightnessSet);
             } else if (strcmp(v.asChar(), STATE_OFF) == 0) {
-                m_fPower(false, b != workingHsb.brightness());
+                m_fPower(false, !brightnessSet);
             }
         });
     }
@@ -132,13 +134,12 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
     // We absolutly never want to process any messages below here during bootup
     // as they might have odd and unwanted side effects
     if (strstr(topicPos, EFFECT_TOPIC) != 0) {
-        const HSB workingHsb = hsbFromString(p_setHsb, m_mqttReceiveBuffer);
+        const HSB workingHsb = hsbFromString(p_setHsb, m_mqttReceiveBuffer, nullptr);
         // Get variables from payload
         const char* name;
         int16_t pulse = -1;
         int16_t period = -1;
         int32_t duration = -1;
-        const HSB hsb = hsbFromString(workingHsb, m_mqttReceiveBuffer);
         OptParser::get(m_mqttReceiveBuffer, [&name, &period, &pulse, &duration](OptValue v) {
             // Get variables from filter
             if (strcmp(v.key(), ENAME) == 0) {
@@ -170,14 +171,14 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
             period = period < 2 ? 2 : period;
             pulse = pulse < period && pulse > 0 ? pulse : period >> 1;
 
-            if (hsb == workingHsb) {
+            if (p_setHsb == workingHsb) {
                 m_fEffect(std::move(std::unique_ptr<Effect>(new FlashEffect(p_currentHsb.toBuilder().brightness(0).build(), transitionCounter, period, pulse))));
             } else {
-                m_fEffect(std::move(std::unique_ptr<Effect>(new FlashEffect(hsb, transitionCounter, period, pulse))));
+                m_fEffect(std::move(std::unique_ptr<Effect>(new FlashEffect(workingHsb, transitionCounter, period, pulse))));
             }
         } else if (strcmp(name, EFFECT_FADE) == 0) {
             if (duration > 0) {
-                m_fEffect(std::move(std::unique_ptr<Effect>(new TransitionEffect(hsb, millis(), duration))));
+                m_fEffect(std::move(std::unique_ptr<Effect>(new TransitionEffect(workingHsb, millis(), duration))));
             }
         }
     } else if (strcmp(topicPos, RESTART_TOPIC) == 0) {
@@ -187,16 +188,21 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
     }
 }
 
-HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data) {
+HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data, bool* brightnessSet) {
     float h, s, b, w1, w2;
     h = hsb.hue();
     s = hsb.saturation();
     b = hsb.brightness();
     w1 = hsb.white1();
     w2 = hsb.white2();
-    OptParser::get(data, [&h, &s, &b, &w1, &w2](OptValue f) {
+
+    if (brightnessSet != nullptr) {
+        *brightnessSet = false;
+    }
+
+    OptParser::get(data, [&h, &s, &b, &w1, &w2, &brightnessSet](OptValue f) {
         if (strcmp(f.key(), "hsb")  == 0 || strstr(f.key(), ",") != nullptr) {
-            OptParser::get(f.asChar(), ",", [&h, &s, &b, &w1, &w2](OptValue c) {
+            OptParser::get(f.asChar(), ",", [&h, &s, &b, &w1, &w2, &brightnessSet](OptValue c) {
                 switch (c.pos()) {
                     case 0:
                         h = Helpers::between(c.asFloat(), 0.f, 359.9999f);
@@ -208,6 +214,10 @@ HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data) {
 
                     case 2:
                         b = Helpers::between(c.asFloat(), 0.f, 100.f);
+
+                        if (brightnessSet != nullptr) {
+                            *brightnessSet = true;
+                        }
                         break;
 
                     case 3:
@@ -225,6 +235,10 @@ HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data) {
             s = Helpers::between(f.asFloat(), 0.f, 100.f);
         } else if (strcmp(f.key(), "b") == 0) {
             b = Helpers::between(f.asFloat(), 0.f, 100.f);
+
+            if (brightnessSet != nullptr) {
+                *brightnessSet = true;
+            }
         } else if (strcmp(f.key(), "w1") == 0) {
             w1 = Helpers::between(f.asFloat(), 0.f, 100.f);
         } else if (strcmp(f.key(), "w2") == 0) {
