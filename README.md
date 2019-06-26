@@ -311,6 +311,24 @@ light:
     payload_available: "online"
     payload_not_available: "offline"
 ```
+#### Configuration with homebridge
+
+Use the following plugin https://github.com/rvt/homebridge-esp8266leds
+Once added to homebridge you can add accessories with the following configuration
+
+```javascript
+{
+  "accessory": "esp8266leds",
+  "name": "Bed Light",
+  "url": "http://localhost:1883",
+  "username": "<USERNAME>",
+  "password": "<PASSWORD>",
+  "caption": "Bed Light",
+  "baseTopic": "RGBW/00AD4715"
+}
+```
+
+At this moment only state (ON/OFF) and HSB can be controller with homebridge
 
 #### Configuration with OpenHAB 2
 
