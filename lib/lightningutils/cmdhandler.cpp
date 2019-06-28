@@ -100,9 +100,9 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
         // If ON/OFF are used within the color topic
         OptParser::get(m_mqttReceiveBuffer, [&](OptValue v) {
             if (strcmp(v.asChar(), STATE_ON) == 0) {
-                m_fPower(true, !brightnessSet);
+                m_fPower(true);
             } else if (strcmp(v.asChar(), STATE_OFF) == 0) {
-                m_fPower(false, !brightnessSet);
+                m_fPower(false);
             }
         });
     }
@@ -188,6 +188,7 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
     }
 }
 
+// brightnessSet will be true when we received a brightness within the string
 HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data, bool* brightnessSet) {
     float h, s, b, w1, w2;
     h = hsb.hue();

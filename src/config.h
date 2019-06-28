@@ -28,6 +28,7 @@
 #define DEVICE_MODEL                    "UNDEFINED"
 #endif
 
+// #define USE_LAST_HSB_STATE_AT_BOOT   // When defined it will use the last HSB state at boot instead of turning on
 
 // #define IR_REMOTE
 // #define RF_REMOTE

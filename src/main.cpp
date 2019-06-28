@@ -63,7 +63,11 @@ volatile uint32_t effectPeriodStartMillis = 0;
 volatile boolean receiveRFCodeFromRemote = true;
 
 // Set to true during cold startup
+#if !defined(USE_LAST_HSB_STATE_AT_BOOT)
 volatile boolean coldStartupActive = true;
+#else
+volatile boolean coldStartupActive = false;
+#endif
 
 // Pwm Leds handler
 std::unique_ptr<Leds> pwmLeds(nullptr);
@@ -175,13 +179,14 @@ HSB getOffState(const HSB& hsb) {
  * When hsn is off it will be turned on with the given brightness
  */
 HSB getOnState(const HSB& hsb, float brightness) {
+#if !defined(USE_LAST_HSB_STATE_AT_BOOT) 
     // If the light is already on, we ignore EEPROM settings
     if (hsb.brightness() < STARTUP_MIN_BRIGHTNESS) {
         return hsb.toBuilder()
                .brightness(brightness)
                .build();
     }
-
+#endif
     return hsb;
 }
 
@@ -488,17 +493,12 @@ void setup() {
 
     cmdHandler.reset(new CmdHandler(
                          properties,
-    [](bool power, bool processOnState) {
+    [](bool power) {
         // during startup never turn off the device
         if (!coldStartupActive) {
             colorControllerService->power(power);
             settingsDTO->data()->power = power;
 
-            if (power && processOnState) {
-                const HSB hsb = getOnState(colorControllerService->hsb(), settingsDTO->data()->brightness);
-                colorControllerService->hsb(hsb);
-                settingsDTO->data()->hsb(hsb);
-            }
         }
     },
     [](const HSB & hsb) {
@@ -565,9 +565,11 @@ void setup() {
         settingsDTO.reset(new SettingsDTO());
     }
 
+#if !defined(USE_LAST_HSB_STATE_AT_BOOT) 
     if (settingsDTO->data()->brightness < STARTUP_MIN_BRIGHTNESS) {
         settingsDTO->data()->brightness = STARTUP_MIN_BRIGHTNESS;
     }
+#endif
 
     const HSB startHsb = getOnState(settingsDTO->data()->hsb(), settingsDTO->data()->brightness);
     // Enable colorController service (handles filters and effects)
@@ -578,8 +580,10 @@ void setup() {
     }));
 
     // Ensure we turn with some brightness on the device after we bootup
+#if !defined(USE_LAST_HSB_STATE_AT_BOOT) 
     settingsDTO->data()->power = true;
     colorControllerService->power(true);
+#endif
 
     // Enable the MQTT Store
     mqttStore.reset(new MQTTStore(
