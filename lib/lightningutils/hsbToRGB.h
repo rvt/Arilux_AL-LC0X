@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstdlib>
 
 /**
  * Baseclass for HSB to RGB conversions
