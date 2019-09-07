@@ -1,6 +1,7 @@
 #include "pwmleds.h"
 #include "Arduino.h"
 #include "config.h"
+#include <Helpers.h>
 
 // PWM Range
 #define ARILUX_PWM_RANGE 2047
@@ -80,19 +81,17 @@ bool PwmLeds::setAll(const float p_red, const float p_green, const float p_blue,
     m_lastWhite1 = p_white1;
     m_lastWhite2 = p_white2;
     */
-    auto fmap = [](float x, float in_min, float in_max, float out_min, float out_max) {
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    };
-    analogWrite(m_redPin, fmap(p_red, 0.f, 100.f, 0.f, ARILUX_RED_PWM_RANGE));
-    analogWrite(m_greenPin, fmap(p_green, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE));
-    analogWrite(m_bluePin, fmap(p_blue, 0.f, 100.f, 0.f, ARILUX_BLUE_PWM_RANGE));
+
+    analogWrite(m_redPin, Helpers::fmap(p_red, 0.f, 100.f, 0.f, ARILUX_RED_PWM_RANGE));
+    analogWrite(m_greenPin, Helpers::fmap(p_green, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE));
+    analogWrite(m_bluePin, Helpers::fmap(p_blue, 0.f, 100.f, 0.f, ARILUX_BLUE_PWM_RANGE));
 
     if (m_white1Pin != 0) {
-        analogWrite(m_white1Pin, fmap(p_white1, 0.f, 100.f, 0.f, ARILUX_WHITE1_PWM_RANGE));
+        analogWrite(m_white1Pin, Helpers::fmap(p_white1, 0.f, 100.f, 0.f, ARILUX_WHITE1_PWM_RANGE));
     }
 
     if (m_white2Pin != 0) {
-        analogWrite(m_white2Pin, fmap(p_white2, 0.f, 100.f, 0.f, ARILUX_WHITE2_PWM_RANGE));
+        analogWrite(m_white2Pin, Helpers::fmap(p_white2, 0.f, 100.f, 0.f, ARILUX_WHITE2_PWM_RANGE));
     }
 
     return true;

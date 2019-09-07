@@ -2,6 +2,7 @@
 #include "Arduino.h"
 #include "config.h"
 #include <algorithm>
+#include <Helpers.h>
 extern "C" {
 #include "pwm.h"
 }
@@ -101,20 +102,17 @@ bool NewPwmLeds::setAll(const float p_red, const float p_green, const float p_bl
         return false;
     }
 
-    auto fmap = [](float x, float in_min, float in_max, float out_min, float out_max) {
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    };
     uint8_t channels = 0;
-    pwm_set_duty(fmap(p_red, 0.f, 100.f, 0.f, ARILUX_RED_PWM_RANGE), channels++);
-    pwm_set_duty(fmap(p_green, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE), channels++);
-    pwm_set_duty(fmap(p_blue, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE), channels++);
+    pwm_set_duty(Helpers::fmap(p_red, 0.f, 100.f, 0.f, ARILUX_RED_PWM_RANGE), channels++);
+    pwm_set_duty(Helpers::fmap(p_green, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE), channels++);
+    pwm_set_duty(Helpers::fmap(p_blue, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE), channels++);
 
     if (m_white1Pin != 0) {
-        pwm_set_duty(fmap(p_white1, 0.f, 100.f, 0.f, ARILUX_WHITE1_PWM_RANGE), channels++);
+        pwm_set_duty(Helpers::fmap(p_white1, 0.f, 100.f, 0.f, ARILUX_WHITE1_PWM_RANGE), channels++);
     }
 
     if (m_white2Pin != 0) {
-        pwm_set_duty(fmap(p_white2, 0.f, 100.f, 0.f, ARILUX_WHITE2_PWM_RANGE), channels++);
+        pwm_set_duty(Helpers::fmap(p_white2, 0.f, 100.f, 0.f, ARILUX_WHITE2_PWM_RANGE), channels++);
     }
 
     pwm_start(); // commit

@@ -219,6 +219,7 @@ HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data, bool* brightness
                         if (brightnessSet != nullptr) {
                             *brightnessSet = true;
                         }
+
                         break;
 
                     case 3:

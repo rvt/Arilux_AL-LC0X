@@ -24,7 +24,8 @@ set(LIB_SOURCES
     ../lib/lightningutils/basicfilters.cpp
     ../lib/lightningutils/colorcontrollerservice.cpp
     ../lib/utils/propertyutils.cpp
-    ../.piolibdeps/opt-parser/src/optparser.cpp
+    ../.pio/libdeps/LC01_RGB/opt-parser/src/optparser.cpp
+    ../lib/lightningutils/hsbToRGB.cpp
 )
 
 set(LIB_HEADERS
@@ -35,7 +36,7 @@ set(LIB_HEADERS
     ../lib/libhelpers
     ../lib/utils
     ../lib/helpers
-    ../.piolibdeps/opt-parser/src
+    ../.pio/libdeps/LC01_RGB/opt-parser/src
 )
 
 include_directories(catch2 ${LIB_HEADERS})

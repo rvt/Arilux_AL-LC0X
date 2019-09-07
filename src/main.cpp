@@ -39,6 +39,7 @@
 #include "mqttstore.h"
 #include <optparser.h>
 #include <statemachine.h>
+#include <hsbToRGB.h>
 
 // Effects
 #include <effect.h>
@@ -76,6 +77,8 @@ std::unique_ptr<ColorControllerService> colorControllerService(nullptr);
 // Command handler
 std::unique_ptr<CmdHandler> cmdHandler(nullptr);
 
+
+std::unique_ptr<HSBToRGB> hSBToRGB(nullptr);
 
 #if defined(RF_REMOTE)
 RCSwitch rcSwitch = RCSwitch();
@@ -179,13 +182,15 @@ HSB getOffState(const HSB& hsb) {
  * When hsn is off it will be turned on with the given brightness
  */
 HSB getOnState(const HSB& hsb, float brightness) {
-#if !defined(USE_LAST_HSB_STATE_AT_BOOT) 
+#if !defined(USE_LAST_HSB_STATE_AT_BOOT)
+
     // If the light is already on, we ignore EEPROM settings
     if (hsb.brightness() < STARTUP_MIN_BRIGHTNESS) {
         return hsb.toBuilder()
                .brightness(brightness)
                .build();
     }
+
 #endif
     return hsb;
 }
@@ -518,19 +523,19 @@ void setup() {
         settingsDTO->data()->hsb(setHsb);
         colorControllerService->hsb(setHsb);
     },
-        [](std::unique_ptr<Filter> filter) {
-            colorControllerService->filter(std::move(filter));
-        },
-        [](std::unique_ptr<Effect> effect) {
-            colorControllerService->effect(std::move(effect));
-        },
-        [](const uint32_t base) {
-            settingsDTO->data()->remoteBase = base;
-        },
-        []() {
-            ESP.restart();
-        }
-    ));
+    [](std::unique_ptr<Filter> filter) {
+        colorControllerService->filter(std::move(filter));
+    },
+    [](std::unique_ptr<Effect> effect) {
+        colorControllerService->effect(std::move(effect));
+    },
+    [](const uint32_t base) {
+        settingsDTO->data()->remoteBase = base;
+    },
+    []() {
+        ESP.restart();
+    }
+                     ));
 
     // Setup Wi-Fi
     setupWiFi(properties);
@@ -547,6 +552,9 @@ void setup() {
     } while (i < 750);
 
 #endif
+    // HSB to RGB conversion service
+    hSBToRGB.reset(HsbToRGBGeneric::genericLedStrip());
+
     //pwmLeds.reset(new PwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN));
     NewPwmLeds* leds = new NewPwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN);
     leds->init();
@@ -565,22 +573,25 @@ void setup() {
         settingsDTO.reset(new SettingsDTO());
     }
 
-#if !defined(USE_LAST_HSB_STATE_AT_BOOT) 
+#if !defined(USE_LAST_HSB_STATE_AT_BOOT)
+
     if (settingsDTO->data()->brightness < STARTUP_MIN_BRIGHTNESS) {
         settingsDTO->data()->brightness = STARTUP_MIN_BRIGHTNESS;
     }
+
 #endif
 
     const HSB startHsb = getOnState(settingsDTO->data()->hsb(), settingsDTO->data()->brightness);
     // Enable colorController service (handles filters and effects)
     colorControllerService.reset(new ColorControllerService(startHsb, [](const HSB & currentHsb) {
         float colors[3];
-        currentHsb.constantRGB(colors);
+        // currentHsb.constantRGB(colors);
+        hSBToRGB->toRgb(currentHsb.hue(), currentHsb.saturation(), currentHsb.brightness(), colors);
         pwmLeds->setAll(colors[0], colors[1], colors[2], currentHsb.cwhite1(), currentHsb.cwhite2());
     }));
 
     // Ensure we turn with some brightness on the device after we bootup
-#if !defined(USE_LAST_HSB_STATE_AT_BOOT) 
+#if !defined(USE_LAST_HSB_STATE_AT_BOOT)
     settingsDTO->data()->power = true;
     colorControllerService->power(true);
 #endif

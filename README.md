@@ -422,5 +422,3 @@ You Must credit the author and link to this repository if you implement any of h
 [MQTT]: http://mqtt.org/
 [Alternative firmware]: https://github.com/mertenats/Arilux_AL-LC0X 
 
-# Gamma correction
-https://learn.adafruit.com/led-tricks-gamma-correction/the-longer-fix

@@ -1,5 +1,6 @@
 #include "basiceffects.h"
 #include <hsb.h>
+#include <Helpers.h>
 
 #ifndef UNIT_TEST
 #include <Arduino.h>
@@ -145,14 +146,12 @@ HSB TransitionEffect::calcHSB(const uint32_t p_count,
                               const HSB& p_hsb) const {
     const float percent = ((p_time - m_startMillis) * 100) / m_duration;
     const float m_hsbsPath = HSB::hueShortestPath(p_hsb.hue(), m_hsb.hue());
-    auto fmap = [](float x, float in_min, float in_max, float out_min, float out_max) {
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    };
-    const float newHue = fmap(percent, 0.f, 100.f, p_hsb.hue(), m_hsbsPath);
+
+    const float newHue = Helpers::fmap(percent, 0.f, 100.f, p_hsb.hue(), m_hsbsPath);
     return HSB(
                HSB::fixHue(newHue),
-               fmap(percent, 0.f, 100.f, p_hsb.saturation(), m_hsb.saturation()),
-               fmap(percent, 0.f, 100.f, p_hsb.brightness(), m_hsb.brightness()),
-               fmap(percent, 0.f, 100.f, p_hsb.white1(), m_hsb.white1()),
-               fmap(percent, 0.f, 100.f, p_hsb.white2(), m_hsb.white2()));
+               Helpers::fmap(percent, 0.f, 100.f, p_hsb.saturation(), m_hsb.saturation()),
+               Helpers::fmap(percent, 0.f, 100.f, p_hsb.brightness(), m_hsb.brightness()),
+               Helpers::fmap(percent, 0.f, 100.f, p_hsb.white1(), m_hsb.white1()),
+               Helpers::fmap(percent, 0.f, 100.f, p_hsb.white2(), m_hsb.white2()));
 }
