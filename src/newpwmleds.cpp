@@ -2,7 +2,7 @@
 #include "Arduino.h"
 #include "config.h"
 #include <algorithm>
-#include <Helpers.h>
+#include <helpers.h>
 extern "C" {
 #include "pwm.h"
 }

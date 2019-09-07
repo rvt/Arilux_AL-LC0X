@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include <stdint.h>
 #include <iostream>
-#include <Helpers.h>
+#include <helpers.h>
 
 
 const float valuemap[] = { 1, 5, 10, 10 };

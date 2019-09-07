@@ -1,7 +1,7 @@
 #include "pwmleds.h"
 #include "Arduino.h"
 #include "config.h"
-#include <Helpers.h>
+#include <helpers.h>
 
 // PWM Range
 #define ARILUX_PWM_RANGE 2047

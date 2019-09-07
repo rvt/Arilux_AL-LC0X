@@ -1,6 +1,6 @@
 #include "basiceffects.h"
 #include <hsb.h>
-#include <Helpers.h>
+#include <helpers.h>
 
 #ifndef UNIT_TEST
 #include <Arduino.h>
