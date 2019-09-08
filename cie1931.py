@@ -3,7 +3,7 @@
 # L* = 116   * Y^1/3 - 16,   if Y >= 0.008856
 
 INPUT_SIZE = 200.0       # Input integer size
-OUTPUT_SIZE = 100.0      # Output integer size
+OUTPUT_SIZE = 1.0      # Output integer size
 INT_TYPE = 'const float'
 PROGMEM = 'PROGMEM'
 TABLE_NAME = 'cie1931';

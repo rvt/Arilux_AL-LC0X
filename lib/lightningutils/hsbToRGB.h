@@ -28,6 +28,7 @@ private:
     const size_t m_map_size;
     const float* m_cie1931;
     const size_t m_cie1931_size;
+    const float m_degreeSeperation;
 public:
     HsbToRGBGeneric(
         const float* red,

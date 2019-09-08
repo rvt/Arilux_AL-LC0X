@@ -73,7 +73,7 @@ TEST_CASE("should convert to B s=100 b=0", "[HsbToRGBGeneric]") {
     REQUIRE(rgb[1] == Approx(0.f));
     REQUIRE(rgb[2] == Approx(0.f));
 }
-
+ 
 ///////////////// SATURATION /////////////////
 TEST_CASE("should handle saturation to s=0 b=50", "[HsbToRGBGeneric]") {
     test->toRgb(120.f, 0.f, 50.f, rgb);
