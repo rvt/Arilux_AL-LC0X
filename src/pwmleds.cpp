@@ -2,6 +2,7 @@
 #include "Arduino.h"
 #include "config.h"
 #include <helpers.h>
+#include <cie1931.h>
 
 // PWM Range
 #define ARILUX_PWM_RANGE 2047
@@ -64,7 +65,7 @@ bool PwmLeds::init(void) const {
 }
 
 bool PwmLeds::setAll(const float p_red, const float p_green, const float p_blue, const float p_white1, const float p_white2) const {
-    // Don´t update the PWN if the changes are relative small
+    // Don´t update the PWM if the changes are relative small
     // Mostly helpfull when there are no changes at all
     /*
     if (fabs(m_lastRed - p_red) < 0.01 &&
@@ -82,16 +83,18 @@ bool PwmLeds::setAll(const float p_red, const float p_green, const float p_blue,
     m_lastWhite2 = p_white2;
     */
 
-    analogWrite(m_redPin, Helpers::fmap(p_red, 0.f, 100.f, 0.f, ARILUX_RED_PWM_RANGE));
-    analogWrite(m_greenPin, Helpers::fmap(p_green, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE));
-    analogWrite(m_bluePin, Helpers::fmap(p_blue, 0.f, 100.f, 0.f, ARILUX_BLUE_PWM_RANGE));
+    analogWrite(m_redPin, Helpers::fmap(p_red, 100.f, ARILUX_RED_PWM_RANGE));
+    analogWrite(m_greenPin, Helpers::fmap(p_green, 100.f, ARILUX_GREEN_PWM_RANGE));
+    analogWrite(m_bluePin, Helpers::fmap(p_blue, 100.f, ARILUX_BLUE_PWM_RANGE));
 
     if (m_white1Pin != 0) {
-        analogWrite(m_white1Pin, Helpers::fmap(p_white1, 0.f, 100.f, 0.f, ARILUX_WHITE1_PWM_RANGE));
+        float br = Helpers::lookupTableInterp(cie1931, cie1931_size, p_white1 * cie1931_mul);
+        analogWrite(m_white1Pin, Helpers::fmap(br, cie1931[cie1931_size - 1], ARILUX_WHITE1_PWM_RANGE));
     }
 
     if (m_white2Pin != 0) {
-        analogWrite(m_white2Pin, Helpers::fmap(p_white2, 0.f, 100.f, 0.f, ARILUX_WHITE2_PWM_RANGE));
+        float br = Helpers::lookupTableInterp(cie1931, cie1931_size, p_white2 * cie1931_mul);
+        analogWrite(m_white2Pin, Helpers::fmap(p_white2, cie1931[cie1931_size - 1], ARILUX_WHITE2_PWM_RANGE));
     }
 
     return true;

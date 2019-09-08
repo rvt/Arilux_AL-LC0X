@@ -25,6 +25,7 @@ with open('cie1931.h', 'w') as f:
 
     f.write('#include <stddef.h>\n')
     f.write('const size_t %s_size = %d;\n' % (TABLE_NAME, INPUT_SIZE+1))
+    f.write('const size_t %s_mul = %ff; // Multiplication for this table if in range was 0..100 \n' % (TABLE_NAME, INPUT_SIZE/100.0))
     f.write('%s %s[] %s = {\n' % (INT_TYPE, TABLE_NAME, PROGMEM))
     f.write('\t')
     for i,L in enumerate(y):

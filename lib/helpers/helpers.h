@@ -28,6 +28,11 @@ public:
         return (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     }
 
+    // same as fmap execpt the in_min and out_min is always 0.f
+    static float fmap(float value, float in_max, float out_max) {
+        return value * out_max / in_max;
+    }
+
     /**
      * Lookup a value from the table and apply interpolation
      * for in between values

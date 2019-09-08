@@ -7,11 +7,18 @@
 
 // Hue degrees point for each color map
 // Inspiration is from https://github.com/FastLED/FastLED/wiki/FastLED-HSV-Colors
-// The below table implements the rainbow colormap
-//                                  0,     45,     90 ,   135,    180,    225,    270,    315,    360
-const float r_ledstripmap[] = { 1-1.0f, 1-.85f, 1-.85f, 1-.00f, 1-.00f, 1-.00f, 1-.25f, 1-.75f, 1-1.0f};
-const float g_ledstripmap[] = { 1-.00f, 1-.25f, 1-.60f, 1-1.0f, 1-.75f, 1-.00f, 1-.00f, 1-.00f, 1-.00f};
-const float b_ledstripmap[] = { 1-.00f, 1-.00f, 1-.00f, 1-.00f, 1-.25f, 1-1.0f, 1-.75f, 1-.25f, 1-.00f};
+// This is the original curve as advertised on FastLED
+//                                     000       045       090      135        180       225       270       315       360
+//const float r_ledstripmap[] = { 1 - 1.0f, 1 - .75f, 1 - .85f, 1 - .00f, 1 - .00f, 1 - .00f, 1 - .25f, 1 - .75f, 1 - 1.0f};
+//const float g_ledstripmap[] = { 1 - .00f, 1 - .25f, 1 - .60f, 1 - 1.0f, 1 - .75f, 1 - .00f, 1 - .00f, 1 - .00f, 1 - .00f};
+//const float b_ledstripmap[] = { 1 - .00f, 1 - .00f, 1 - .00f, 1 - .00f, 1 - .25f, 1 - 1.0f, 1 - .75f, 1 - .25f, 1 - .00f};
+
+// The below table implements the rainbow colormap modified for my ledstrip so it looked better on the yellow
+//                                   000       045       090      135        180       225       270       315       360
+const float r_ledstripmap[] = { 1 - 1.0f, 1 - .80f, 1 - .85f, 1 - .00f, 1 - .00f, 1 - .00f, 1 - .25f, 1 - .75f, 1 - 1.0f};
+const float g_ledstripmap[] = { 1 - .00f, 1 - .20f, 1 - .60f, 1 - 1.0f, 1 - .75f, 1 - .00f, 1 - .00f, 1 - .00f, 1 - .00f};
+const float b_ledstripmap[] = { 1 - .00f, 1 - .00f, 1 - .00f, 1 - .00f, 1 - .25f, 1 - 1.0f, 1 - .75f, 1 - .25f, 1 - .00f};
+
 
 HsbToRGBGeneric::HsbToRGBGeneric(
     const float* red,
@@ -26,7 +33,7 @@ HsbToRGBGeneric::HsbToRGBGeneric(
     m_map_size(map_size),
     m_cie1931(cie1931),
     m_cie1931_size(cie1931_size),
-    m_degreeSeperation(360.f / map_size) {
+    m_degreeSeperation(360.f / (map_size - 1)) {
 }
 
 HSBToRGB* HsbToRGBGeneric::genericLedStrip() {
@@ -52,7 +59,7 @@ HSBToRGB* HsbToRGBGeneric::genericLedStrip() {
 void HsbToRGBGeneric::toRgb(float _h, float _s, float _b, float _rgb[]) const {
 
     // Calculate brightness value br is in the range of 0..1
-    float br = Helpers::lookupTableInterp(m_cie1931, m_cie1931_size, _b * 2.f);
+    float br = Helpers::lookupTableInterp(m_cie1931, m_cie1931_size, _b * cie1931_mul);
 
     // Calculate RGB values each value is in the range of 0..100
     float sepNum = _h / m_degreeSeperation;
