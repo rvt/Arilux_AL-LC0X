@@ -18,7 +18,7 @@ This firmware has been tested with OpenHAB and just a bit om Home Assistance.
 - ON/OFF states will correctly fade in/out and remember the last color (in EEPROM)
 - Easy to make new effects, See effect.h and some of the including Effects
 - You can send partial updates for the color, for example just can just send the hue, brightness or white values
-- After startup the LED will always turn on as a safety feature (handy if the device is behind a switch, mqtt down, wifi down etc..)
+- Optionally (compile time setting) After startup the LED will always turn on as a safety feature (handy if the device is behind a switch, mqtt down, wifi down etc..)
 - Solid reconnect to your MQTT broker.
 - Uses Stefan Bruens PWM library for much finer grained controll, currently supporting 5000 levels of brightness per channel!!
 - Remote control over the MQTT protocol via individual topics
@@ -28,6 +28,8 @@ This firmware has been tested with OpenHAB and just a bit om Home Assistance.
 - TLS support (uncomment `#define TLS` in `setup.h` and change the fingerprint if not using CloudMQTT)
 - ArduinoOTA support for over-the-air firmware updates
 - Native support for OpenHAB and should work with Home Assistant with MQTT
+- Fading using cie1931 math
+- Color correction using rainbow table for better color reproduction
 
 ### Current effects are:
 
