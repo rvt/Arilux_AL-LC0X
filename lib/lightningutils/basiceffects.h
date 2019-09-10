@@ -21,7 +21,7 @@ public:
 };
 
 /**
- * Cycle between all colors of the rainbow
+ * Cycle between a vector of colors where each colro is given by a specific hue
  */
 class ColorsEffect final : public Effect {
 private:

@@ -10,6 +10,7 @@
 #include "basiceffects.h"
 #include <optparser.h>
 #include <helpers.h>
+#include <makeunique.h>
 
 #define FILTER_FADING_ALPHA         0.1f
 #define FILTER_TOPIC                      "/filter"
@@ -122,9 +123,9 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
 
         // Setup the filter
         if (strcmp(name, FILTER_NONE) == 0) {
-            m_fFilter(std::move(std::unique_ptr<Filter>(new NoFilter())));
+            m_fFilter(std::move(std::make_unique<NoFilter>()));
         } else if (strcmp(name, FILTER_FADING) == 0) {
-            m_fFilter(std::move(std::unique_ptr<Filter>(new FadingFilter(p_currentHsb, alpha))));
+            m_fFilter(std::move(std::make_unique<FadingFilter>(p_currentHsb, alpha)));
         }
     } else if (strstr(topicPos, REMOTE_TOPIC) != nullptr) {
         const uint32_t base = atol(m_mqttReceiveBuffer);
@@ -160,25 +161,25 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
         });
 
         if (strcmp(name, EFFECT_NONE) == 0) {
-            m_fEffect(std::move(std::unique_ptr<Effect>(new NoEffect())));
+            m_fEffect(std::move(std::make_unique<NoEffect>())));
         } else if (strcmp(name, EFFECT_RAINBOW) == 0) {
             if (duration > 0) {
-                m_fEffect(std::move(std::unique_ptr<Effect>(new RainbowEffect(p_currentHsb.hue(), duration, millis()))));
+                m_fEffect(std::move(std::make_unique<RainbowEffect>(p_currentHsb.hue(), duration, millis())));
             } else {
-                m_fEffect(std::move(std::unique_ptr<Effect>(new RainbowEffect(millis()))));
+                m_fEffect(std::move(std::make_unique<RainbowEffect>(millis())));
             }
         } else if (strcmp(name, EFFECT_FLASH) == 0) {
             period = period < 2 ? 2 : period;
             pulse = pulse < period && pulse > 0 ? pulse : period >> 1;
 
             if (p_setHsb == workingHsb) {
-                m_fEffect(std::move(std::unique_ptr<Effect>(new FlashEffect(p_currentHsb.toBuilder().brightness(0).build(), transitionCounter, period, pulse))));
+                m_fEffect(std::move(std::make_unique<FlashEffect>(p_currentHsb.toBuilder().brightness(0).build(), transitionCounter, period, pulse)));
             } else {
-                m_fEffect(std::move(std::unique_ptr<Effect>(new FlashEffect(workingHsb, transitionCounter, period, pulse))));
+                m_fEffect(std::move(std::make_unique<FlashEffect>(workingHsb, transitionCounter, period, pulse)));
             }
         } else if (strcmp(name, EFFECT_FADE) == 0) {
             if (duration > 0) {
-                m_fEffect(std::move(std::unique_ptr<Effect>(new TransitionEffect(workingHsb, millis(), duration))));
+                m_fEffect(std::move(std::make_unique<TransitionEffect>(workingHsb, millis(), duration)));
             }
         }
     } else if (strcmp(topicPos, RESTART_TOPIC) == 0) {
