@@ -161,7 +161,7 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
         });
 
         if (strcmp(name, EFFECT_NONE) == 0) {
-            m_fEffect(std::move(std::make_unique<NoEffect>())));
+            m_fEffect(std::move(std::make_unique<NoEffect>()));
         } else if (strcmp(name, EFFECT_RAINBOW) == 0) {
             if (duration > 0) {
                 m_fEffect(std::move(std::make_unique<RainbowEffect>(p_currentHsb.hue(), duration, millis())));
