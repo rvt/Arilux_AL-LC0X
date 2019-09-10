@@ -144,7 +144,7 @@ bool TransitionEffect::isCompleted(const uint32_t p_count,
 HSB TransitionEffect::calcHSB(const uint32_t p_count,
                               const uint32_t p_time,
                               const HSB& p_hsb) const {
-    const float percent = ((p_time - m_startMillis) * 100) / m_duration;
+    const float percent = ((p_time - m_startMillis) * 100.f) / (float)m_duration;
     const float m_hsbsPath = HSB::hueShortestPath(p_hsb.hue(), m_hsb.hue());
 
     const float newHue = Helpers::fmap(percent, 0.f, 100.f, p_hsb.hue(), m_hsbsPath);

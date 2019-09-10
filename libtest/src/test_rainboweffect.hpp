@@ -10,6 +10,10 @@ SCENARIO("Raimboweffect will change based on time", "[rainbow]") {
                 HSB hsb = rainbow.handleEffect(0, 300*1000 + 00 * 1000, HSB(20.0f, 0.0f,  0.0f,  0.0f,  0.0f));
                 REQUIRE(hsb.hue() == Approx(0.0f));
             }
+            THEN("colors shuld be at 13.2 (handle fractions, (11/300)*360)") {
+                HSB hsb = rainbow.handleEffect(0, 300*1000 + 11 * 1000, HSB(20.0f, 0.0f,  0.0f,  0.0f,  0.0f));
+                REQUIRE(hsb.hue() == Approx(13.2f));
+            }
             THEN("colors shuld be at green ") {
                 HSB hsb = rainbow.handleEffect(0, 300*1000 + 100 * 1000, HSB(20.0f, 0.0f,  0.0f,  0.0f,  0.0f));
                 REQUIRE(hsb.hue() == Approx(120.0f));
