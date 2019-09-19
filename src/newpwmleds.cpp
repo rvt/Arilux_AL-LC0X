@@ -7,7 +7,7 @@ extern "C" {
 #include "pwm.h"
 }
 
-#define PWM_PERIOD 5000
+#define PWM_PERIOD 2500
 
 // Ranges on which we maximum set each PWM channel
 // This can be used as a cheap calibration (curveless)
@@ -92,34 +92,56 @@ bool NewPwmLeds::init(void)  {
 }
 
 bool NewPwmLeds::setAll(const float p_red, const float p_green, const float p_blue, const float p_white1, const float p_white2) const {
-    // Don´t update the PWN if the changes are relative small
-    // Mostly helpfull when there are no changes at all
-    if (fabs(m_lastRed - p_red) < 0.005 &&
-        fabs(m_lastGreen - p_green) < 0.005 &&
-        fabs(m_lastBlue - p_blue) < 0.005 &&
-        fabs(m_lastWhite1 - p_white1) < 0.005 &&
-        fabs(m_lastWhite2 - p_white2) < 0.005) {
-        return false;
-    }
+    int32_t tRed = Helpers::percentmap(p_red, ARILUX_RED_PWM_RANGE);
+    int32_t tGreen = Helpers::percentmap(p_green, ARILUX_GREEN_PWM_RANGE);
+    int32_t tBlue = Helpers::percentmap(p_blue, ARILUX_BLUE_PWM_RANGE);
+    bool setValue=false;
 
     uint8_t channels = 0;
-    pwm_set_duty(Helpers::fmap(p_red, 0.f, 100.f, 0.f, ARILUX_RED_PWM_RANGE), channels++);
-    pwm_set_duty(Helpers::fmap(p_green, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE), channels++);
-    pwm_set_duty(Helpers::fmap(p_blue, 0.f, 100.f, 0.f, ARILUX_GREEN_PWM_RANGE), channels++);
+    if (abs(m_lastRed - tRed) >= 1) {
+        setValue=true;
+        pwm_set_duty(tRed, channels);
+    }
+    channels++;
+    
+    if (abs(m_lastGreen - tGreen) >= 1) {
+        setValue=true;
+        pwm_set_duty(tGreen, channels);
+    }
+    channels++;
 
+    if (abs(m_lastBlue - tBlue) >= 1) {
+        setValue=true;
+        pwm_set_duty(tBlue, channels);
+    }
+    channels++;
+
+    int32_t tWhite1=0;
     if (m_white1Pin != 0) {
-        pwm_set_duty(Helpers::fmap(p_white1, 0.f, 100.f, 0.f, ARILUX_WHITE1_PWM_RANGE), channels++);
+        tWhite1 = Helpers::percentmap(p_white1, ARILUX_WHITE1_PWM_RANGE);
+        if (abs(m_lastWhite1 - tWhite1) >= 1) {
+            setValue=true;
+            pwm_set_duty(tWhite1, channels);
+        }
     }
+    channels++;
 
+    int32_t tWhite2=0;
     if (m_white2Pin != 0) {
-        pwm_set_duty(Helpers::fmap(p_white2, 0.f, 100.f, 0.f, ARILUX_WHITE2_PWM_RANGE), channels++);
+        tWhite2 = Helpers::percentmap(p_white2, ARILUX_WHITE2_PWM_RANGE);
+        if (abs(m_lastWhite2 - tWhite2) >= 1) {
+            setValue=true;
+            pwm_set_duty(tWhite2, channels);
+        }
     }
 
-    pwm_start(); // commit
-    m_lastRed = p_red;
-    m_lastGreen = p_green;
-    m_lastBlue = p_blue;
-    m_lastWhite1 = p_white1;
-    m_lastWhite2 = p_white2;
+    if (setValue) {
+        pwm_start(); // commit
+        m_lastRed = tRed;
+        m_lastGreen = tGreen;
+        m_lastBlue = tBlue;
+        m_lastWhite1 = tWhite1;
+        m_lastWhite2 = tWhite2;
+    }
     return true;
 }

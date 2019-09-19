@@ -13,11 +13,11 @@ private:
     const uint8_t m_white1Pin;
     const uint8_t m_white2Pin;
 
-    mutable float m_lastRed;
-    mutable float m_lastGreen;
-    mutable float m_lastBlue;
-    mutable float m_lastWhite1;
-    mutable float m_lastWhite2;
+    mutable int32_t m_lastRed;
+    mutable int32_t m_lastGreen;
+    mutable int32_t m_lastBlue;
+    mutable int32_t m_lastWhite1;
+    mutable int32_t m_lastWhite2;
     mutable uint32_t io_info[5][3];
 public:
     NewPwmLeds(const uint8_t red_pin, const uint8_t green_pin, const uint8_t blue_pin, const uint8_t white1_pin, const uint8_t white2_pin);

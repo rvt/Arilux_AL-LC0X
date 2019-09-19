@@ -34,6 +34,13 @@ public:
     }
 
     /**
+     * Maps a input value that is from 0..100.f to a output value out_max
+     */
+    static float percentmap(float value, float out_max) {
+        return value * out_max / 100.f;
+    }
+
+    /**
      * Lookup a value from the table and apply interpolation
      * for in between values
      * When value is outside of the range we return the upper or lower value of the table
