@@ -38,11 +38,11 @@ NewPwmLeds::NewPwmLeds(const uint8_t red_pin,
     m_bluePin(blue_pin),
     m_white1Pin(white1_pin),
     m_white2Pin(white2_pin),
-    m_lastRed(0.0f),
-    m_lastGreen(0.0f),
-    m_lastBlue(0.0f),
-    m_lastWhite1(0.0f),
-    m_lastWhite2(0.0f) {
+    m_lastRed(0),
+    m_lastGreen(0),
+    m_lastBlue(0),
+    m_lastWhite1(0),
+    m_lastWhite2(0) {
 }
 
 NewPwmLeds::~NewPwmLeds() {
