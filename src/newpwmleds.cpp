@@ -95,53 +95,59 @@ bool NewPwmLeds::setAll(const float p_red, const float p_green, const float p_bl
     int32_t tRed = Helpers::percentmap(p_red, ARILUX_RED_PWM_RANGE);
     int32_t tGreen = Helpers::percentmap(p_green, ARILUX_GREEN_PWM_RANGE);
     int32_t tBlue = Helpers::percentmap(p_blue, ARILUX_BLUE_PWM_RANGE);
-    bool setValue=false;
+    bool setValue = false;
 
     uint8_t channels = 0;
+
     if (abs(m_lastRed - tRed) >= 1) {
-        setValue=true;
+        setValue = true;
         pwm_set_duty(tRed, channels);
+        m_lastRed = tRed;
     }
+
     channels++;
-    
+
     if (abs(m_lastGreen - tGreen) >= 1) {
-        setValue=true;
+        setValue = true;
         pwm_set_duty(tGreen, channels);
+        m_lastGreen = tGreen;
     }
+
     channels++;
 
     if (abs(m_lastBlue - tBlue) >= 1) {
-        setValue=true;
+        setValue = true;
         pwm_set_duty(tBlue, channels);
+        m_lastBlue = tBlue;
     }
+
     channels++;
 
-    int32_t tWhite1=0;
     if (m_white1Pin != 0) {
-        tWhite1 = Helpers::percentmap(p_white1, ARILUX_WHITE1_PWM_RANGE);
+        int32_t tWhite1 = Helpers::percentmap(p_white1, ARILUX_WHITE1_PWM_RANGE);
+
         if (abs(m_lastWhite1 - tWhite1) >= 1) {
-            setValue=true;
+            setValue = true;
             pwm_set_duty(tWhite1, channels);
+            m_lastWhite1 = tWhite1;
         }
     }
+
     channels++;
 
-    int32_t tWhite2=0;
     if (m_white2Pin != 0) {
-        tWhite2 = Helpers::percentmap(p_white2, ARILUX_WHITE2_PWM_RANGE);
+        int32_t tWhite2 = Helpers::percentmap(p_white2, ARILUX_WHITE2_PWM_RANGE);
+
         if (abs(m_lastWhite2 - tWhite2) >= 1) {
-            setValue=true;
+            setValue = true;
             pwm_set_duty(tWhite2, channels);
+            m_lastWhite2 = tWhite2;
         }
     }
 
     if (setValue) {
         pwm_start(); // commit
-        m_lastRed = tRed;
-        m_lastGreen = tGreen;
-        m_lastBlue = tBlue;
-        m_lastWhite1 = tWhite1;
-        m_lastWhite2 = tWhite2;
     }
+
     return true;
 }

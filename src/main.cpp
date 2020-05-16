@@ -5,26 +5,21 @@
 */
 #include <memory>
 #include <cstring>
-#include "debug.h"
 
 #include <ESP8266WiFi.h>  // https://github.com/esp8266/Arduino
 #include <ESP8266mDNS.h>
 #include "config.h"
 #include <crceeprom.h>
 
-#if defined(IR_REMOTE)
-#include <IRremoteESP8266.h> // https://github.com/markszabo/IRremoteESP8266
-#endif
-#if defined(RF_REMOTE)
-#include <RCSwitch.h> // https://github.com/sui77/rc-switch
-#endif
-
 #include <ArduinoOTA.h>
 #include <ESP_EEPROM.h>
+#include "LittleFS.h"
+#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 
 #include "pwmleds.h"
 #include "newpwmleds.h"
 #include "colorcontrollerservice.h"
+#include "statusModel.h"
 #include <hsb.h>
 
 // Included in code so we can increase packet size
@@ -40,19 +35,19 @@
 #include <optparser.h>
 #include <statemachine.h>
 #include <hsbToRGB.h>
+#include <propertyutils.h>
 
 // Effects
 #include <effect.h>
 #include <filter.h>
 
-// Number of ms per effect transistion, 20ms == 50 Hz
-#define FRAMES_PER_SECOND        50
-#define EFFECT_PERIOD_CALLBACK   (1000 / FRAMES_PER_SECOND)
-
-#include <propertyutils.h>
 
 typedef PropertyValue PV ;
-Properties properties;
+bool controllerConfigModified;
+
+Properties controllerConfig;
+bool storeLedStatusConfigInLittleFS;
+Properties ledStatusConfig;
 
 // Counter that keeps counting up, used for filters, effects or other means to keep EFFECT_PERIOD_CALLBACK
 // of transitions
@@ -61,14 +56,11 @@ volatile uint32_t transitionCounter = 1;
 // Keep track when the last time we ran the effect state changes
 volatile uint32_t effectPeriodStartMillis = 0;
 
-volatile boolean receiveRFCodeFromRemote = true;
+// True when we first startup
+volatile boolean startupFromBoot = true;
 
-// Set to true during cold startup
-#if !defined(USE_LAST_HSB_STATE_AT_BOOT)
-volatile boolean coldStartupActive = true;
-#else
-volatile boolean coldStartupActive = false;
-#endif
+// Indicate that a service requested an restart. Set to millies() of current time and it will restart 5000ms later
+volatile uint32_t shouldRestart = 0;
 
 // Pwm Leds handler
 std::unique_ptr<Leds> pwmLeds(nullptr);
@@ -77,33 +69,118 @@ std::unique_ptr<ColorControllerService> colorControllerService(nullptr);
 // Command handler
 std::unique_ptr<CmdHandler> cmdHandler(nullptr);
 
-
+// hsb2RGB converter
 std::unique_ptr<HSBToRGB> hSBToRGB(nullptr);
 
-#if defined(RF_REMOTE)
-RCSwitch rcSwitch = RCSwitch();
-#endif
-#if defined(TLS)
-WiFiClientSecure wifiClient;
-#else
+StatusModel ledStatusModel;
+StatusModel lastStatusModel;
+
+
+WiFiManager wm;
+#define MQTT_SERVER_LENGTH 40
+#define MQTT_PORT_LENGTH 5
+#define MQTT_USERNAME_LENGTH 18
+#define MQTT_PASSWORD_LENGTH 18
+WiFiManagerParameter wm_mqtt_server("server", "mqtt server", "", MQTT_SERVER_LENGTH);
+WiFiManagerParameter wm_mqtt_port("port", "mqtt port", "", MQTT_PORT_LENGTH);
+WiFiManagerParameter wm_mqtt_user("user", "mqtt username", "", MQTT_USERNAME_LENGTH);
+const char _customHtml_hidden[] = "type=\"password\"";
+WiFiManagerParameter wm_mqtt_password("input", "mqtt password", "", MQTT_PASSWORD_LENGTH, _customHtml_hidden, WFM_LABEL_AFTER);
+
 WiFiClient wifiClient;
-#endif
 PubSubClient mqttClient(wifiClient);
 
-// Settings
-std::unique_ptr<SettingsDTO> settingsDTO(nullptr);
+enum BootMode {
+    TURNOFF = 0, // 0 turn Off at boot, ignore MQTT
+    TURNON = 1, // 1 turn on at boot, ignore MQTT
+    LASTKNOWNNOMQTT = 2, // 2 last known setting at boot, ignore MQTT
+    FOLLOWMQTT = 3 // 3 last known setting at boot, and follow MQTT commands at boot
+};
 
+///////////////////////////////////////////////////////////////////////////
+//  LittleFS
+///////////////////////////////////////////////////////////////////////////
+bool loadConfigLittleFS(const char* filename, Properties& properties) {
+    bool ret = false;
+
+    if (LittleFS.begin()) {
+        Serial.println("mounted file system");
+
+        if (LittleFS.exists(filename)) {
+            //file exists, reading and loading
+            File configFile = LittleFS.open(filename, "r");
+
+            if (configFile) {
+                Serial.print(F("Loading config : "));
+                Serial.println(filename);
+                deserializeProperties<64>(configFile, properties);
+                //   serializeProperties<64>(Serial, properties);
+            }
+
+            configFile.close();
+        } else {
+            Serial.print(F("File not found: "));
+            Serial.println(filename);
+        }
+
+        // LittleFS.end();
+    } else {
+        Serial.print(F("Failed to begin LittleFS"));
+    }
+
+    return ret;
+}
+
+
+/**
+ * Store custom oarameter configuration in LittleFS
+ */
+bool saveConfigLittleFS(const char* filename, Properties& properties) {
+    bool ret = false;
+
+    if (LittleFS.begin()) {
+        LittleFS.remove(filename);
+        File configFile = LittleFS.open(filename, "w");
+
+        if (configFile) {
+            Serial.print(F("Saving config : "));
+            Serial.println(filename);
+            serializeProperties<64>(configFile, properties);
+                             serializeProperties<64>(Serial, properties);
+            ret = true;
+        } else {
+            Serial.print(F("Failed to write file"));
+            Serial.println(filename);
+        }
+
+        configFile.close();
+        //    LittleFS.end();
+    }
+
+    return ret;
+}
+
+///////////////////////////////////////////////////////////////////////////
+//  LittleFS
+///////////////////////////////////////////////////////////////////////////
 // Eeprom storage
 // wait 500ms after last commit, then commit no more often than every 30s
-Settings eepromSaveHandler(
+Settings ledStatusSaveHandler(
     500,
     30000,
 []() {
-    CRCEEProm::write(0, *settingsDTO->data());
-    EEPROM.commit();
+    ledStatusConfig.put("hue", PV(ledStatusModel.hsb().hue()));
+    ledStatusConfig.put("saturation", PV(ledStatusModel.hsb().saturation()));
+    ledStatusConfig.put("brightness", PV(ledStatusModel.hsb().brightness()));
+    ledStatusConfig.put("startupBrightness", PV(ledStatusModel.startupBrightness()));
+    ledStatusConfig.put("white1", PV(ledStatusModel.hsb().white1()));
+    ledStatusConfig.put("white2", PV(ledStatusModel.hsb().white2()));
+    ledStatusConfig.put("power", PV(ledStatusModel.power()));
+    saveConfigLittleFS(LEDSTATUS_FILENAME, ledStatusConfig);
+    storeLedStatusConfigInLittleFS = false;
 },
 []() {
-    return settingsDTO->modified();
+    return storeLedStatusConfigInLittleFS;
 }
 );
 
@@ -112,44 +189,24 @@ Settings eepromSaveHandler(
 std::unique_ptr<MQTTStore> mqttStore(nullptr);
 Settings mqttSaveHandler(
     1,
-    MQTT_STATE_UPDATE_DELAY,
+    5000,
 []() {
-    mqttStore->save(*settingsDTO->data());
+    mqttStore->save(ledStatusModel);
 },
 []() {
-    return settingsDTO->modified();
+
+    if (lastStatusModel != ledStatusModel) {
+        storeLedStatusConfigInLittleFS = true; // Must be done here because we also force update mqtt
+        lastStatusModel = ledStatusModel;
+        return true;
+    }
+
+    return false;
 }
 );
 
 std::unique_ptr<StateMachine> bootSequence(nullptr);
 
-
-///////////////////////////////////////////////////////////////////////////
-//  SSL/TLS
-///////////////////////////////////////////////////////////////////////////
-/*
-  Function called to verify the fingerprint of the MQTT server certificate
-*/
-#if defined(TLS)
-void verifyFingerprint() {
-    DEBUG_PRINT(F("INFO: Connecting to "));
-    DEBUG_PRINTLN(MQTT_SERVER);
-
-    if (!wifiClient.connect(MQTT_SERVER, MQTT_PORT)) {
-        DEBUG_PRINTLN(F("ERROR: Connection failed. Halting execution"));
-        delay(1000);
-        ESP.reset();
-    }
-
-    if (wifiClient.verify(TLS_FINGERPRINT, MQTT_SERVER)) {
-        DEBUG_PRINTLN(F("INFO: Connection secure"));
-    } else {
-        DEBUG_PRINTLN(F("ERROR: Connection insecure! Halting execution"));
-        delay(1000);
-        ESP.reset();
-    }
-}
-#endif
 
 ///////////////////////////////////////////////////////////////////////////
 //  Utilities
@@ -161,13 +218,33 @@ void verifyFingerprint() {
  */
 void publishToMQTT(const char* topic, const char* payload) {
     if (mqttClient.publish(topic, payload, true)) {
-        DEBUG_PRINT(F("INFO: MQTT message publish succeeded. Topic: "));
-        DEBUG_PRINT(topic);
-        DEBUG_PRINT(F(". Payload: "));
-        DEBUG_PRINTLN(payload);
+        Serial.print("Published: ");
+        Serial.print(topic);
+        Serial.print(" ");
+        Serial.println(payload);
     } else {
-        DEBUG_PRINTLN(F("ERROR: MQTT message publish failed, either connection lost, or message too large"));
+        Serial.println("Failed to publish to mqtt");
     }
+}
+
+void publishRelativeToBaseMQTT(const char* topic, const char* payload) {
+    char buffer[65];
+    const char* mqttBaseTopic = controllerConfig.get("mqttBaseTopic");
+    strncpy(buffer, mqttBaseTopic, sizeof(buffer));
+    strncat(buffer, "/", sizeof(buffer));
+    strncat(buffer, topic, sizeof(buffer));
+    publishToMQTT(buffer, payload);
+}
+
+void publishRelativeToBaseMQTT(const char* topic1, const char* topic2, const char* payload) {
+    char buffer[65];
+    const char* mqttBaseTopic = controllerConfig.get("mqttBaseTopic");
+    strncpy(buffer, mqttBaseTopic, sizeof(buffer));
+    strncat(buffer, "/", sizeof(buffer));
+    strncat(buffer, topic1, sizeof(buffer));
+    strncat(buffer, "/", sizeof(buffer));
+    strncat(buffer, topic2, sizeof(buffer));
+    publishToMQTT(buffer, payload);
 }
 
 /**
@@ -179,19 +256,15 @@ HSB getOffState(const HSB& hsb) {
 
 /**
  * Get´s the ON state of a given HSB
- * When hsn is off it will be turned on with the given brightness
+ * When brightness is < STARTUP_MIN_BRIGHTNESS it will be turned on with the given brightness
  */
 HSB getOnState(const HSB& hsb, float brightness) {
-#if !defined(USE_LAST_HSB_STATE_AT_BOOT)
-
-    // If the light is already on, we ignore EEPROM settings
     if (hsb.brightness() < STARTUP_MIN_BRIGHTNESS) {
         return hsb.toBuilder()
                .brightness(brightness)
                .build();
     }
 
-#endif
     return hsb;
 }
 
@@ -202,219 +275,206 @@ void handleCmd(const char* topic, const char* cmd) {
     cmdHandler->handle(topic, cmd, colorControllerService->hsb(), colorControllerService->currentHsb(), transitionCounter);
 }
 
-
 ///////////////////////////////////////////////////////////////////////////
-//  WiFi
+//  Webserver/WIFIManager
 ///////////////////////////////////////////////////////////////////////////
-
-void setupWiFi(const Properties& props) {
-    auto mqttClientID = props.get("mqttClientID").getCharPtr();
-    auto wifi_ssid = props.get("wifi_ssid").getCharPtr();
-    auto wifi_password = props.get("wifi_password").getCharPtr();
-    WiFi.hostname(mqttClientID);
-    Serial.print(F("INFO: Connecting to: "));
-    Serial.println(wifi_ssid);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(wifi_ssid, wifi_password);
-    randomSeed(micros());
-    MDNS.begin(mqttClientID);
+void serverOnlineCallback() {
+    Serial.println("Server online");
 }
 
-///////////////////////////////////////////////////////////////////////////
-//  Function called to handle received RF codes from the remote
-///////////////////////////////////////////////////////////////////////////
-#if defined(RF_REMOTE)
-void handleRFRemote(void) {
-    if (rcSwitch.available()) {
-        // Before boot is finnished and the remote
-        // is pressed we will store the remote controle base code
-        if (receiveRFCodeFromRemote) {
-            settingsDTO->data()->remoteBase = rcSwitch.getReceivedValue() & 0xFFFF00;
-        }
+void saveParamCallback() {
+    Serial.println("[CALLBACK] saveParamCallback fired");
 
-        const uint32_t value = rcSwitch.getReceivedValue() - settingsDTO->data()->remoteBase;
-        DEBUG_PRINT(F("Key Received : "));
-        DEBUG_PRINT(value & 0xFFFF00);
-        DEBUG_PRINT(F(" / key:"));
-        DEBUG_PRINTLN(value);
-
-        switch (value) {
-            case ARILUX_REMOTE_KEY_BRIGHT_PLUS:
-                // brightnessFilter.increase();
-                break;
-
-            case ARILUX_REMOTE_KEY_BRIGHT_MINUS:
-                // brightnessFilter.decrease();
-                break;
-
-            case ARILUX_REMOTE_KEY_OFF:
-                handleCmd("/color", "OFF");
-                break;
-
-            case ARILUX_REMOTE_KEY_ON:
-                handleCmd("/color", "ON");
-                break;
-
-            case ARILUX_REMOTE_KEY_RED:
-                handleCmd("/color", "h=0 s=100");
-                break;
-
-            case ARILUX_REMOTE_KEY_GREEN:
-                handleCmd("/color", "h=120 s=100");
-                break;
-
-            case ARILUX_REMOTE_KEY_BLUE:
-                handleCmd("/color", "h=240 s=100");
-                break;
-
-            case ARILUX_REMOTE_KEY_WHITE:
-                handleCmd("/color", "s=0");
-                break;
-
-            case ARILUX_REMOTE_KEY_ORANGE:
-                handleCmd("/color", "h=25 s=100");
-                break;
-
-            case ARILUX_REMOTE_KEY_LTGRN:
-                handleCmd("/color", "h=120 s=90");
-                break;
-
-            case ARILUX_REMOTE_KEY_LTBLUE:
-                handleCmd("/color", "h=240 s=90");
-                break;
-
-            case ARILUX_REMOTE_KEY_AMBER:
-                handleCmd("/color", "h=49 s=100");
-                break;
-
-            case ARILUX_REMOTE_KEY_CYAN:
-                handleCmd("/color", "h=180 s=100");
-                break;
-
-            case ARILUX_REMOTE_KEY_PURPLE:
-                handleCmd("/color", "h=300 s=100");
-                break;
-
-            case ARILUX_REMOTE_KEY_YELLOW:
-                handleCmd("/color", "h=60 s=100");
-                break;
-
-            case ARILUX_REMOTE_KEY_PINK:
-                handleCmd("/color", "h=350 s=90");
-                break;
-
-            case ARILUX_REMOTE_KEY_TOGGLE:
-                //                currentEffect.reset(new NoEffect());
-                break;
-
-            case ARILUX_REMOTE_KEY_SPEED_PLUS:
-                // TODO: Implement some incremantal speedup filter
-                //              workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() + 5, 360.f)).build();
-                break;
-
-            case ARILUX_REMOTE_KEY_SPEED_MINUS:
-                // TODO: Implement some incremantal speedup filter
-                //              workingHsb = workingHsb.toBuilder().hue(fmod(workingHsb.hue() - 5, 360.f)).build();
-                break;
-
-            case ARILUX_REMOTE_KEY_MODE_PLUS:
-                //               auto hsb = colorControllerService->hsb()
-                //               workingHsb = workingHsb.toBuilder().saturation(Helpers::between(workingHsb.saturation() + 5, 0.f, 100.f)).build();
-                break;
-
-            case ARILUX_REMOTE_KEY_MODE_MINUS:
-                //                auto hsb = colorControllerService->hsb()
-                //                workingHsb = workingHsb.toBuilder().saturation(Helpers::between(workingHsb.saturation() - 5, 0.f, 100.f)).build();
-                break;
-
-            default:
-                DEBUG_PRINTLN(F("ERROR: RF code not defined"));
-                break;
-        }
-
-        rcSwitch.resetAvailable();
+    if (std::strlen(wm_mqtt_server.getValue()) > 0) {
+        controllerConfig.put("mqttServer", PV(wm_mqtt_server.getValue()));
+        controllerConfig.put("mqttPort", PV(std::atoi(wm_mqtt_port.getValue())));
+        controllerConfig.put("mqttUsername", PV(wm_mqtt_user.getValue()));
+        controllerConfig.put("mqttPassword", PV(wm_mqtt_password.getValue()));
+        controllerConfigModified = true;
+        // Redirect from MQTT so on the next reconnect we pickup new values
+        mqttClient.disconnect();
+        // Send redirect back to param page
+        wm.server->sendHeader(F("Location"), F("/param?"), true);
+        wm.server->send(302, FPSTR(HTTP_HEAD_CT2), "");   // Empty content inhibits Content-length header so we have to close the socket ourselves.
+        wm.server->client().stop();
     }
 }
-#endif
 
 /**
- * Create a new char* from input
+ * Setup the wifimanager and configuration page
  */
-char* makeString(const char* format, ...) {
-    char buffer[256];
-    va_list args;
-    va_start(args, format);
-    vsnprintf(buffer, 255, format, args);
-    va_end(args);
-    return strdup(buffer);
+void setupWifiManager() {
+    char port[6];
+    snprintf(port, sizeof(port), "%d", (int16_t)controllerConfig.get("mqttPort"));
+    wm_mqtt_port.setValue(port, MQTT_PORT_LENGTH);
+    wm_mqtt_password.setValue(controllerConfig.get("mqttPassword"), MQTT_PASSWORD_LENGTH);
+    wm_mqtt_user.setValue(controllerConfig.get("mqttUsername"), MQTT_USERNAME_LENGTH);
+    wm_mqtt_server.setValue(controllerConfig.get("mqttServer"), MQTT_SERVER_LENGTH);
+
+    // Set extra setup page
+    wm.setWebServerCallback(serverOnlineCallback);
+    wm.addParameter(&wm_mqtt_server);
+    wm.addParameter(&wm_mqtt_port);
+    wm.addParameter(&wm_mqtt_user);
+    wm.addParameter(&wm_mqtt_password);
+
+    // set country
+    wm.setClass("invert");
+    wm.setCountry("US"); // setting wifi country seems to improve OSX soft ap connectivity, may help others as well
+
+    // Set configuration portal
+    wm.setShowStaticFields(false);
+    wm.setConfigPortalBlocking(false); // Must be blocking or else AP stays active
+    wm.setDebugOutput(false);
+    wm.setSaveParamsCallback(saveParamCallback);
+    wm.setHostname(controllerConfig.get("mqttClientID"));
+    std::vector<const char*> menu = {"wifi", "wifinoscan", "info", "param", "sep", "erase", "restart"};
+    wm.setMenu(menu);
+
+    wm.startWebPortal();
+    wm.autoConnect(controllerConfig.get("mqttClientID"));
+    WiFi.setSleepMode(WIFI_NONE_SLEEP);
+    MDNS.begin(controllerConfig.get("mqttClientID"));
 }
 
-void loadConfiguration(Properties& props) {
-    // 00FF1234
-    const char* chipId = makeString("%08X", ESP.getChipId());
-    // ARILUX00FF1234
-    props.put("mqttClientID", PV(makeString(HOSTNAME_TEMPLATE, chipId)));
-    // RGBW/00FF1234
-    const char* mqttTopicPrefix = makeString(MQTT_TOPIC_PREFIX_TEMPLATE, MQTT_PREFIX, chipId);
-    props.put("mqttTopicPrefix", PV(mqttTopicPrefix));
-    // RGBW/00FF1234/lastwill
-    props.put("mqttLastWillTopic", PV(makeString(MQTT_LASTWILL_TOPIC_TEMPLATE, mqttTopicPrefix)));
-    //  RGBW/00FF1234/+
-    const char* mqttSubscriberTopic = makeString(MQTT_SUBSCRIBER_TOPIC_TEMPLATE, mqttTopicPrefix);
-    props.put("mqttSubscriberTopic", PV(mqttSubscriberTopic));
-    // Calculate length of the subcriber topic
-    props.put("mqttSubscriberTopicStrLength", PV((int32_t)std::strlen(mqttSubscriberTopic) - 2));
-    // friendlyName : Arilux LC11 RGBW LED Controller 00FF1234
-    props.put("friendlyName", PV(makeString("Arilux %s %s LED Controller %s", DEVICE_MODEL, MQTT_PREFIX, chipId)));
-    // Wigi username and password
-    props.put("wifi_ssid", PV(WIFI_SSID));
-    props.put("wifi_password", PV(WIFI_PASSWORD));
-    // mqtt server and port
-    props.put("mqtt_server", PV(MQTT_SERVER));
-    props.put("mqtt_port", PV(MQTT_PORT));
-    delete chipId;
+///////////////////////////////////////////////////////////////////////////
+//  Startup/Defaults
+///////////////////////////////////////////////////////////////////////////
+
+void setupDefaults() {
+
+    char chipHexBuffer[9];
+    snprintf(chipHexBuffer, sizeof(chipHexBuffer), "%08X", ESP.getChipId());
+
+    char mqttClientID[16];
+    snprintf(mqttClientID, sizeof(mqttClientID), "RGBW_%s", chipHexBuffer);
+
+    char mqttBaseTopic[16];
+    snprintf(mqttBaseTopic, sizeof(mqttBaseTopic), "RGBW/%s", chipHexBuffer);
+
+    char mqttLastWillTopic[64];
+    snprintf(mqttLastWillTopic, sizeof(mqttLastWillTopic), "%s/%s", mqttBaseTopic, MQTT_LASTWILL_TOPIC);
+
+    // Defaults for the controller
+    controllerConfigModified |= controllerConfig.putNotContains("mqttClientID", PV(mqttClientID));
+    controllerConfigModified |= controllerConfig.putNotContains("mqttBaseTopic", PV(mqttBaseTopic));
+    controllerConfigModified |= controllerConfig.putNotContains("mqttServer", PV(""));
+    controllerConfigModified |= controllerConfig.putNotContains("mqttUsername", PV(""));
+    controllerConfigModified |= controllerConfig.putNotContains("mqttPassword", PV(""));
+    controllerConfigModified |= controllerConfig.putNotContains("mqttPort", PV(1883));
+    controllerConfigModified |= controllerConfig.putNotContains("mqttLastWillTopic", PV(mqttLastWillTopic));
+    // 0 turn Off at boot, ignore MQTT
+    // 1 turn on at boot, ignore MQTT
+    // 2 last known setting at boot, ignore MQTT
+    // 3 last known setting at boot, and follow MQTT commands at boot
+    controllerConfigModified |= controllerConfig.putNotContains("bootMode", PV(2));
+    controllerConfigModified |= controllerConfig.putNotContains("pauseForOTA", PV(true));
+
+    // Defaults for LED status
+    ledStatusConfig.putNotContains("hue", PV(0.f));
+    ledStatusConfig.putNotContains("saturation", PV(0.f));
+    ledStatusConfig.putNotContains("brightness", PV(100.0f));
+    // Startup Brightness
+    ledStatusConfig.putNotContains("startupBrightness", PV(50.f));
+    // Warm White
+    ledStatusConfig.putNotContains("white1", PV(0.f));
+    ledStatusConfig.putNotContains("white2", PV(0.f));
+    // power status
+    ledStatusConfig.putNotContains("power", PV(true));
 }
 
+void setupLedStatusModelAtBoot() {
+    HSB hsb = HSB(
+                  ledStatusConfig.get("hue"),
+                  ledStatusConfig.get("saturation"),
+                  ledStatusConfig.get("brightness"),
+                  ledStatusConfig.get("white1"),
+                  ledStatusConfig.get("white2")
+              );
+
+    bool power;
+    float startupBrightness = ledStatusConfig.get("startupBrightness");
+
+    const BootMode bootMode = static_cast<BootMode>((long)controllerConfig.get("bootMode"));
+
+    switch (bootMode) {
+        case TURNOFF: // Turn off at boot
+            power = false;
+            hsb = hsb.toBuilder().white1(0).white2(0).build();
+            break;
+
+        case TURNON: // Turn on at boot
+            power = true;
+            hsb = hsb.toBuilder().brightness(startupBrightness).build();
+            break;
+
+        case LASTKNOWNNOMQTT: // last known setting at boot, ignore MQTT
+        case FOLLOWMQTT: // last known setting at boot, ignore MQTT
+        default:
+            power = ledStatusConfig.get("power");
+    }
+
+    ledStatusModel = StatusModel(hsb, startupBrightness, power);
+    lastStatusModel = ledStatusModel;
+}
 
 /**
  * Start OTA
  */
 void startOTA() {
     // Start OTA
-    ArduinoOTA.setHostname(properties.get("mqttClientID").getCharPtr());
+    ArduinoOTA.setHostname(controllerConfig.get("mqttClientID"));
     ArduinoOTA.onStart([]() {
-        DEBUG_PRINTLN(F("OTA Beginning"));
+        Serial.println(F("OTA Beginning"));
         pwmLeds->setAll(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     });
     ArduinoOTA.onError([](ota_error_t error) {
-        DEBUG_PRINT("ArduinoOTA Error[");
-        DEBUG_PRINT(error);
-        DEBUG_PRINT("]: ");
+        Serial.print("ArduinoOTA Error[");
+        Serial.print(error);
+        Serial.print("]: ");
 
         if (error == OTA_AUTH_ERROR) {
-            DEBUG_PRINTLN(F("Auth Failed"));
+            Serial.println(F("Auth Failed"));
         } else if (error == OTA_BEGIN_ERROR) {
-            DEBUG_PRINTLN(F("Begin Failed"));
+            Serial.println(F("Begin Failed"));
         } else if (error == OTA_CONNECT_ERROR) {
-            DEBUG_PRINTLN(F("Connect Failed"));
+            Serial.println(F("Connect Failed"));
         } else if (error == OTA_RECEIVE_ERROR) {
-            DEBUG_PRINTLN(F("Receive Failed"));
+            Serial.println(F("Receive Failed"));
         } else if (error == OTA_END_ERROR) {
-            DEBUG_PRINTLN(F("End Failed"));
+            Serial.println(F("End Failed"));
         }
     });
     ArduinoOTA.begin();
-    ArduinoOTA.handle();
+
+    if (controllerConfig.get("pauseForOTA")) {
+        uint16_t i = 0;
+
+        do {
+            delay(10);
+            ArduinoOTA.handle();
+            i++;
+        } while (i < 500); // 5 seconds
+    }
 }
 
-///////////////////////////////////////////////////////////////////////////
-//  SETUP() AND LOOP()
-///////////////////////////////////////////////////////////////////////////
+void setupMQTT() {
+        // Setup mqtt
+    mqttClient.setCallback([](char* p_topic, byte * p_payload, uint16_t p_length) {
+        char mqttReceiveBuffer[64];
 
+        if (p_length >= sizeof(mqttReceiveBuffer)) {
+            Serial.print(F("MQTT Message to long."));
+            return;
+        }
 
-void setup() {
-    // setup Strings
-    loadConfiguration(properties);
+        memcpy(mqttReceiveBuffer, p_payload, p_length);
+        mqttReceiveBuffer[p_length] = 0;
+        handleCmd(p_topic, mqttReceiveBuffer);
+    });
+}
+
+void setupMQTTReconnectManager() {
     State* BOOTSEQUENCESTART;
     State* DELAYEDMQTTCONNECTION;
     State* TESTMQTTCONNECTION;
@@ -429,7 +489,6 @@ void setup() {
         return 2;
     });
     TESTMQTTCONNECTION = new State([]() {
-        receiveRFCodeFromRemote = false;
 
         if (mqttClient.connected())  {
             if (WiFi.status() != WL_CONNECTED) {
@@ -442,40 +501,48 @@ void setup() {
         return 3;
     });
     CONNECTMQTT = new State([]() {
+        mqttClient.setServer(
+            controllerConfig.get("mqttServer"),
+            (int16_t)controllerConfig.get("mqttPort")
+        );
+
         if (mqttClient.connect(
-                properties.get("mqttClientID").getCharPtr(),
-                MQTT_USER,
-                MQTT_PASS,
-                properties.get("mqttLastWillTopic").getCharPtr(),
-                0, 1, MQTT_LASTWILL_OFFLINE)) {
+                controllerConfig.get("mqttClientID"),
+                controllerConfig.get("mqttUsername"),
+                controllerConfig.get("mqttPassword"),
+                controllerConfig.get("mqttLastWillTopic"),
+                0,
+                true,
+                MQTT_LASTWILL_OFFLINE)) {
             return 4;
         }
 
-        DEBUG_PRINTLN(F("ERROR: The connection to the MQTT broker failed"));
-        DEBUG_PRINT(F("Username: "));
-        DEBUG_PRINTLN(MQTT_USER);
-        DEBUG_PRINT(F("Broker: "));
-        DEBUG_PRINTLN(MQTT_SERVER);
+        Serial.println(F("ERROR: The connection to the MQTT broker failed"));
         return 1;
     });
     PUBLISHONLINE = new State([]() {
         publishToMQTT(
-            properties.get("mqttLastWillTopic").getCharPtr(),
+            controllerConfig.get("mqttLastWillTopic"),
             MQTT_LASTWILL_ONLINE);
         return 5;
     });
     SUBSCRIBECOMMANDTOPIC = new State([]() {
-        if (mqttClient.subscribe(properties.get("mqttSubscriberTopic").getCharPtr(), 0)) {
-            DEBUG_PRINT(F("INFO: Connected to topic : "));
+        char mqttSubscriberTopic[32];
+        strncpy(mqttSubscriberTopic, controllerConfig.get("mqttBaseTopic"), sizeof(mqttSubscriberTopic));
+        strncat(mqttSubscriberTopic, "/+", sizeof(mqttSubscriberTopic));
+
+        if (mqttClient.subscribe(mqttSubscriberTopic, 0)) {
+            Serial.print(F("Connected to topic : "));
+            Serial.println(mqttSubscriberTopic);
             return 6;
         }
 
-        DEBUG_PRINT(F("ERROR: Failed to connect to topic : "));
+        Serial.print(F("ERROR: Failed to connect to topic : "));
         mqttClient.disconnect();
         return 1;
     });
     WAITFORCOMMANDCAPTURE = new StateTimed(3000, []() {
-        coldStartupActive = false;
+        startupFromBoot = false;
         // Always force save to update mqtt after re-connection
         mqttSaveHandler.save(true);
         return 2;
@@ -489,39 +556,28 @@ void setup() {
         SUBSCRIBECOMMANDTOPIC, // 5
         WAITFORCOMMANDCAPTURE // 6
     }));
-    // Enable serial port
-    Serial.begin(115200);
-    delay(50);
-    Serial.println(F("Starting"));
-    Serial.println(F("Hostname: "));
-    Serial.println(properties.get("mqttClientID").getCharPtr());
+}
 
+void setupCommandHandler() {
+    uint8_t subscriberTopicLength = strlen(controllerConfig.get("mqttBaseTopic"));
     cmdHandler.reset(new CmdHandler(
-                         properties,
+                         subscriberTopicLength,
     [](bool power) {
-        // during startup never turn off the device
-        if (!coldStartupActive) {
-            colorControllerService->power(power);
-            settingsDTO->data()->power = power;
+        const BootMode bootMode = static_cast<BootMode>((long)controllerConfig.get("bootMode"));
 
+        if (!startupFromBoot || bootMode == FOLLOWMQTT) {
+            colorControllerService->power(power);
+            ledStatusModel.power(power);
         }
     },
     [](const HSB & hsb) {
-        HSB setHsb = hsb;
+        const BootMode bootMode = static_cast<BootMode>((long)controllerConfig.get("bootMode"));
 
-        if (coldStartupActive) {
-            // during startup and when we receive a brightness follow all changes except make sure we don´t turn off the device
-            setHsb = getOnState(setHsb, settingsDTO->data()->brightness);
+        if (!startupFromBoot || bootMode == FOLLOWMQTT) {
+            ledStatusModel.hsb(hsb);
+            colorControllerService->hsb(hsb);
         }
 
-        // Store brightness only if it´s >= 1.0f
-        // We will use the brightness during startup and ON/OFF cycles
-        if (setHsb.brightness() >= 1.0f) {
-            settingsDTO->data()->brightness = setHsb.brightness();
-        }
-
-        settingsDTO->data()->hsb(setHsb);
-        colorControllerService->hsb(setHsb);
     },
     [](std::unique_ptr<Filter> filter) {
         colorControllerService->filter(std::move(filter));
@@ -530,115 +586,66 @@ void setup() {
         colorControllerService->effect(std::move(effect));
     },
     [](const uint32_t base) {
-        settingsDTO->data()->remoteBase = base;
+        // Not implemented
     },
     []() {
-        ESP.restart();
+        shouldRestart = millis();
     }
                      ));
+}
 
-    // Setup Wi-Fi
-    setupWiFi(properties);
+///////////////////////////////////////////////////////////////////////////
+//  SETUP() AND LOOP()
+///////////////////////////////////////////////////////////////////////////
+
+
+void setup() {
+
+    // Enable serial port
+    Serial.begin(115200);
+    delay(50);
+
+    // setup Strings
+    loadConfigLittleFS(CONTROLLERCONFIG_FILENAME, controllerConfig);
+    loadConfigLittleFS(LEDSTATUS_FILENAME, ledStatusConfig);
+    setupDefaults();
+    setupLedStatusModelAtBoot();
+
+    setupCommandHandler();
+    setupMQTT();
+    setupWifiManager();
+    setupMQTTReconnectManager();
     startOTA();
-#if defined(PAUSE_FOR_OTA)
-    uint16_t i = 0;
 
-    do {
-        yield();
-        ArduinoOTA.handle();
-        yield();
-        delay(10);
-        i++;
-    } while (i < 750);
-
-#endif
     // HSB to RGB conversion service
     hSBToRGB.reset(HsbToRGBGeneric::genericLedStrip());
 
-    //pwmLeds.reset(new PwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN));
+    // Start the keds
     NewPwmLeds* leds = new NewPwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN);
     leds->init();
     pwmLeds.reset(leds);
 
-    // load the data from EEPROM or use it's default
-    EEPROM.begin(CRCEEProm::size(*settingsDTO->data()));
-    SettingsDTOData data;
-    bool loadedFromEEPROM = CRCEEProm::read(0, data);
-
-    if (loadedFromEEPROM) {
-        Serial.println(F("Loaded SettingsDTOData back from EEPROM:"));
-        settingsDTO.reset(new SettingsDTO(data));
-    } else {
-        Serial.println(F("Initialising new settingsDTO:"));
-        settingsDTO.reset(new SettingsDTO());
-    }
-
-#if !defined(USE_LAST_HSB_STATE_AT_BOOT)
-
-    if (settingsDTO->data()->brightness < STARTUP_MIN_BRIGHTNESS) {
-        settingsDTO->data()->brightness = STARTUP_MIN_BRIGHTNESS;
-    }
-
-#endif
-
-    const HSB startHsb = getOnState(settingsDTO->data()->hsb(), settingsDTO->data()->brightness);
     // Enable colorController service (handles filters and effects)
-    colorControllerService.reset(new ColorControllerService(startHsb, [](const HSB & currentHsb) {
+    colorControllerService.reset(new ColorControllerService(ledStatusModel.hsb(), [](const HSB & currentHsb) {
         float colors[3];
         // currentHsb.constantRGB(colors);
         hSBToRGB->toRgb(currentHsb.hue(), currentHsb.saturation(), currentHsb.brightness(), colors);
         pwmLeds->setAll(colors[0], colors[1], colors[2], currentHsb.cwhite1(), currentHsb.cwhite2());
     }));
 
-    // Ensure we turn with some brightness on the device after we bootup
-#if !defined(USE_LAST_HSB_STATE_AT_BOOT)
-    settingsDTO->data()->power = true;
-    colorControllerService->power(true);
-#endif
-
     // Enable the MQTT Store
     mqttStore.reset(new MQTTStore(
-                        properties.get("mqttTopicPrefix").getCharPtr(),
-                        MQTT_COLOR_STATE_TOPIC,
-                        MQTT_REMOTE_STATE_TOPIC,
-                        MQTT_STATE_STATE_TOPIC,
+                        controllerConfig.get("mqttBaseTopic"),
+                        "color/state",
+                        "state/state",
                         mqttClient,
-                        STATE_IN_COLOR_TOPIC
+                        true
                     ));
-#if defined(TLS)
-    // Check the fingerprint of CloudMQTT's SSL cert
-    verifyFingerprint();
-#endif
-#if defined(ARILUX_DEBUG_TELNET)
-    // Start the Telnet server
-    startTelnet();
-    handleTelnet();
-#endif
-#if defined(IR_REMOTE)
-    // Start the IR receiver
-    irRecv.enableIRIn();
-#endif
-#if defined(RF_REMOTE)
-    // Start the RF receiver
-    rcSwitch.enableReceive(RF_PIN);
-#endif
-    // Setup mqtt
-    mqttClient.setServer(properties.get("mqtt_server").getCharPtr(), properties.get("mqtt_port").getLong());
-    mqttClient.setCallback([](char* p_topic, byte * p_payload, uint16_t p_length) {
-        char mqttReceiveBuffer[64];
 
-        if (p_length >= sizeof(mqttReceiveBuffer)) {
-            DEBUG_PRINT(F("MQTT Message to long."));
-            return;
-        }
-
-        memcpy(mqttReceiveBuffer, p_payload, p_length);
-        mqttReceiveBuffer[p_length] = 0;
-        handleCmd(p_topic, mqttReceiveBuffer);
-    });
     // Start boot sequence
     bootSequence->start();
     Serial.println(F("Setup done:"));
+
     // Avoid running towards millis() when loop starts
     effectPeriodStartMillis = millis();
 }
@@ -658,14 +665,21 @@ void loop() {
         } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
             mqttClient.loop();
         } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
-            eepromSaveHandler.handle();
+            ledStatusSaveHandler.handle();
+        } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
+            wm.process();
+        } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
+            if (controllerConfigModified) {
+                controllerConfigModified = false;
+                saveConfigLittleFS(CONTROLLERCONFIG_FILENAME, controllerConfig);
+            }
         } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
             mqttSaveHandler.handle();
         } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
-            settingsDTO->reset();
-        } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
             bootSequence->handle();
-            //Serial.println(transitionCounter);
+        } else if (shouldRestart != 0 && (currentMillis - shouldRestart >= 5000)) {
+            shouldRestart = 0;
+            ESP.restart();
         }
 
 #if defined(ARILUX_DEBUG_TELNET)
@@ -675,20 +689,5 @@ void loop() {
         }
 
 #endif
-#if defined(RF_REMOTE)
-        else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
-            // Handle received RF codes from the remote
-            handleRFRemote();
-        }
-
-#endif
-        const uint32_t thisDuration = (millis() - currentMillis);
-
-        if (thisDuration > EFFECT_PERIOD_CALLBACK) {
-            DEBUG_PRINT(F("Spiked : "));
-            DEBUG_PRINT(slot);
-            DEBUG_PRINT(F(" "));
-            DEBUG_PRINTLN(thisDuration);
-        }
     }
 }

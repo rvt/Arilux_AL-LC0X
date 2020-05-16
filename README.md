@@ -18,14 +18,14 @@ This firmware has been tested with OpenHAB and just a bit om Home Assistance.
 - ON/OFF states will correctly fade in/out and remember the last color (in EEPROM)
 - Easy to make new effects, See effect.h and some of the including Effects
 - You can send partial updates for the color, for example just can just send the hue, brightness or white values
-- Optionally (compile time setting) After startup the LED will always turn on as a safety feature (handy if the device is behind a switch, mqtt down, wifi down etc..)
+- After startup the LED will always turn on as a safety feature (handy if the device is behind a switch, mqtt down, wifi down etc..)
 - Solid reconnect to your MQTT broker.
 - Uses Stefan Bruens PWM library for much finer grained controll, currently supporting 5000 levels of brightness per channel!!
 - Remote control over the MQTT protocol via individual topics
 - Supports transitions, flashing and other effects
-- Remote control with the included IR control (uncomment `#define IR_REMOTE` in `config.h`)
-- Remote control with the included RF control (uncomment `#define RF_REMOTE` in `config.h`)
-- TLS support (uncomment `#define TLS` in `setup.h` and change the fingerprint if not using CloudMQTT)
+- ~~Remote control with the included IR control (uncomment `#define IR_REMOTE` in `config.h`)~~ removed, I was not using it
+- ~~Remote control with the included RF control (uncomment `#define RF_REMOTE` in `config.h`)~~ removed, I was not using it
+- ~~TLS support (uncomment `#define TLS` in `setup.h` and change the fingerprint if not using CloudMQTT)~~ removed, I was not using it
 - ArduinoOTA support for over-the-air firmware updates
 - Native support for OpenHAB and should work with Home Assistant with MQTT
 - Fading using cie1931 math
@@ -38,29 +38,15 @@ This firmware has been tested with OpenHAB and just a bit om Home Assistance.
 - Flash:  Flash between two colors or between black and the current color
 - Strobe: Strobe between two colors, period can be given
 
-Old functionality to be re-added
-
-- IR Remote control
-
-## Remote Controle changes
-
-- Remote control Speed + and - will change through colors
-- Remote control Mode + and - changes saturation
-- Remote control toggle stops the current effect
-
 ## Todo
 
- - Configure using some form of web based interface,ard eg, no need to configure for each device using the setup.h file
- - Store and reload the current active Filter in EEPROM/MQTT so the device comes back up correctly after reboot
+ - Setup led pins with web interface
  
 Tested with the [ESP8266 Wi-Fi chip][esp8266] and Wemos devices.
 
-
-
 ### Configuration
 
-You must copy `setup.example.h` to `setup.h` and change settings to match your environment before flashing.
-Within the config.h file there are more options you can override.
+Configuration is done using the web interface
 
 ## Updating
 
@@ -68,17 +54,6 @@ OTA is enabled on this firmware. Assuming the device is plugged in you should fi
 ```platformio device list --mdns --logical | grep arduino```
 
 ## Control
-### IR
-
-TODO
-
-### RF
-
-The LED controller can be controlled with the RF remote included with the Arilux AL-LC09, AL-LC10 and AL-LC11. 
-The `S+` and `S-` buttons can be used to change the color. The `M+` and `M-` buttons can be used to change the saturation. Brightness buttons work as usual.
-
-You can pair a remote control with your arilux by pressing any button on the remote control after powering up
-your arilux device. The pairing will be stored in EEPROM and send over MQTT.
 
 ### MQTT
 
@@ -99,25 +74,31 @@ can be active at a time. NOTE: List of filter is on my todo..
 
 ### Boot Sequence
 
-For savety reasons we want to turn the lights on regardless of any settings,
-for this reason the firmware provides a specific boot sequence to guarantee this.
+Bootmode controls how to start the device.
+Setting for this in web interface comming soon
 
-Bootsequence is done by prioritising where the initial light status come from and will insuring 
-that during boot the lights will always be on with the last set hue and saturation value.
+```
+enum BootMode {
+    TURNOFF = 0, // 0 turn Off at boot, ignore MQTT
+    TURNON = 1, // 1 turn on at boot, ignore MQTT
+    LASTKNOWNNOMQTT = 2, // 2 last known setting at boot, ignore MQTT
+    FOLLOWMQTT = 3 // 3 last known setting at boot, and follow MQTT commands at boot
+};
+```
 
 #### Bootorder:
 
 - Load default settings
-- Get HSB values from EEPROM and turn on LED with these values immediatly
+- Get HSB values from LittleFS
 - Subscribe state topic for two seconds, use any found settings over a period of two seconds
 - Subscribe to command topic and overwrite any settings found in state over a period of two seconds
 
 Considarations:
 
 - After bootsequence the device will always be on in the last configured color setting
-- If no wifi and/or mqtt server found we load up color from EEPROM 
-- When EEPROM is empty we load up a brightness of 50
-- When EEPROM has stored brightness of 0 we load up a brightness of minimum 5
+- If no wifi and/or mqtt server found we load up color from LittleFS 
+- When filesystem is empty we load up a brightness of 50
+- When filesystem has stored brightness of 0 we load up a brightness of minimum 5
 
 #### Control Codes and examples
 
@@ -134,136 +115,157 @@ Considarations:
    | `seperate`       | h=int s=float b=float w1=float w2=float | h=0 s=100 w1=25 w2=100 | Set as separate assignments  |
    | `combined`       | hsb=int,float,float b=float         | hsb=0,100,100 b=25     | Wil take brightness as 25  |
 
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/color" -m 'hsb=0,100,100,0,0' # Set Color to Red
-   mosquitto_pub -t "RGBW/001F162E/color" -m 'h=120' # Set Color to green with current brightness and saturation
-   mosquitto_pub -t "RGBW/001F162E/color" -m 'OFF' # Turn lights off (remember brightness)
-   mosquitto_pub -t "RGBW/001F162E/color" -m 'ON' # Turn lights on with last remembered brightness but ensures at least a minimum brightness is used(remember brightness)
-   mosquitto_pub -t "RGBW/001F162E/color" -m 'b=0.1 ON' # Turn lights with brightness to 0.1
-   ```
+##### Example
+```
+mosquitto_pub -t "RGBW/001F162E/color" -m 'hsb=0,100,100,0,0' # Set Color to Red
+mosquitto_pub -t "RGBW/001F162E/color" -m 'h=120' # Set Color to green with current brightness and saturation
+mosquitto_pub -t "RGBW/001F162E/color" -m 'OFF' # Turn lights off (remember brightness)
+mosquitto_pub -t "RGBW/001F162E/color" -m 'ON' # Turn lights on with last remembered brightness but ensures at least a minimum brightness is used(remember brightness)
+mosquitto_pub -t "RGBW/001F162E/color" -m 'b=0.1 ON' # Turn lights with brightness to 0.1
+```
 
+## Available Filters
 
-   ## Available Filters
+#### Disable Filtering
 
-   #### Disable Filtering
-   Topic: ``/filter`` name=``none``
+Topic: ``/filter`` name=``none``
 
-   Disable any filtering on the colors, color switch between current and new color.
+Disable any filtering on the colors, color switch between current and new color.
 
-   ##### Example
-   ```
-     mosquitto_pub -t "RGBW/001F162E/filter" -m 'name=none'
-   ```
+##### Example
 
-   #### Fade filter
-   Topic: ``/filter`` name=``fading``
+```
+  mosquitto_pub -t "RGBW/001F162E/filter" -m 'name=none'
+```
 
-   Will smoothly fade between colors when a new color is set.
-   This filter is implemented as fromValue + (toValue - fromValue) * m_alpha;
-   
-   | Parameter  | type     | default  | Description          |
-   | ---------- | -------- | -------- | -------------------- |
-   | alpha      | float    | 0.f5     | Speed of fading, keep this between 0.f01 and 0.99   |
+#### Fade filter
 
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/filter" -m 'name=fading alpha=0.1'
-   mosquitto_pub -t "RGBW/001F162E/filter" -m 'name=fading'
-   ```
-    
-   ## Available effects 
-   All effects require the `name` parameter.   
-      
-   #### none
-   Topic: ``/effect`` name=``none``
+Topic: ``/filter`` name=``fading``
+
+Will smoothly fade between colors when a new color is set.
+This filter is implemented as fromValue + (toValue - fromValue) * m_alpha;
+
+| Parameter  | type     | default  | Description          |
+| ---------- | -------- | -------- | -------------------- |
+| alpha      | float    | 0.f5     | Speed of fading, keep this between 0.f01 and 0.99   |
+
+##### Example
+
+```
+mosquitto_pub -t "RGBW/001F162E/filter" -m 'name=fading alpha=0.1'
+mosquitto_pub -t "RGBW/001F162E/filter" -m 'name=fading'
+```
+
+## Available effects 
+
+All effects require the `name` parameter.
   
-   Turn of any running effect   
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=none'
-   ```
-   
-   #### rainbow
-   Topic: ``/effect`` name=``rainbow``
-   
-   Smoothly fades between all colors
+#### none
 
-   | Parameter  | type     | default  | Description          |
-   | ---------- | -------- | -------- | -------------------- |
-   | duration   | long     | 1        | Total time in s it takes to do a full color palette   |
+Topic: ``/effect`` name=``none``
 
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=rainbow' # Default 10 seconds
-   mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=rainbow duration=300' # 5 Minute rotation
-   ```
+Turn of any running effect
 
-   #### Flash
-   Topic: ``/effect`` name=``flash``
-   Flash or strobe between off/on or between two colors
-   Note: For some effects you might want to turn the filter off, specially for strobe style effects.
+##### Example
 
-   | Parameter  | type     | default  | Description          |
-   | ---------- | -------- | -------- | -------------------- |
-   | period     | int      | 50       | Total period measured in ticks. There are 50 ticks per second   |
-   | pulse      | int      | 25       | Width of the on/color pulse measured in ticks    |
-   | hsb        | hsb      |          | When a color is given we flash between this color and the current color insteadof off     |
+```
+mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=none'
+```
 
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=flash'  # 50% duty cycle, on/off
-   mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=flash pulse=1 b=100 s=0' # 2% duty cycle strobe to white once a second
-    
-   # two commands red short and blue longer 
-   mosquitto_pub -t "RGBW/001F162E/color" -m 'hsb=0,100,100,0,0'
-   mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=flash period=100 pulse=10 hsb=240,100,100 period=25'
-   ```
-  
-   #### Fade
-   Topic: ``/effect`` name=``fade``
-   Gradually fade between two colors with a given duration
+#### rainbow
 
-   | Parameter  | type     | default  | Description          |
-   | ---------- | -------- | -------- | -------------------- |
-   | duration   | long     |          | Total time in ms the fade will take   |
+Topic: ``/effect`` name=``rainbow``
 
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=fade duration=15000 hsb=240,100,60' # Fade from current color to blue over 15 seconds
-   ```
+Smoothly fades between all colors
 
-   ### Other things you can do
+| Parameter  | type     | default  | Description          |
+| ---------- | -------- | -------- | -------------------- |
+| duration   | long     | 1        | Total time in s it takes to do a full color palette   |
 
-   #### Restart the device from mqtt
-   Topic: ``/restart``
+##### Example
 
-   Restart the device (handy for development)
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/restart" -m '1'
-   ```
+```
+mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=rainbow' # Default 10 seconds
+mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=rainbow duration=300' # 5 Minute rotation
+```
 
-   #### Set base address of the remote control
-   Topic: ``/remote``
-   
-   Set the base address of the remote control, value will be stored in EEPROM. Currently only tested with RF.
-   You can also pair the remote control by pressing in the first few seconds a key on the remote control.
-   The value will be stored in EEPROM and in mqtt.
+#### Flash
 
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/remote" -m '10622464'
-   ```
+Topic: ``/effect`` name=``flash``
+Flash or strobe between off/on or between two colors
+Note: For some effects you might want to turn the filter off, specially for strobe style effects.
 
-   #### Force storage of settings
-   Topic: ``/store``
+| Parameter  | type     | default  | Description          |
+| ---------- | -------- | -------- | -------------------- |
+| period     | int      | 50       | Total period measured in ticks. There are 50 ticks per second   |
+| pulse      | int      | 25       | Width of the on/color pulse measured in ticks    |
+| hsb        | hsb      |          | When a color is given we flash between this color and the current color insteadof off     |
 
-   See also EEPROM_COMMIT_WAIT_DELAY   
-   ##### Example
-   ```
-   mosquitto_pub -t "RGBW/001F162E/store" -m '1'
-   ```
+##### Example
+
+```
+mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=flash'  # 50% duty cycle, on/off
+mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=flash pulse=1 b=100 s=0' # 2% duty cycle strobe to white once a second
+
+# two commands red short and blue longer 
+mosquitto_pub -t "RGBW/001F162E/color" -m 'hsb=0,100,100,0,0'
+mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=flash period=100 pulse=10 hsb=240,100,100 period=25'
+```
+
+#### Fade
+
+Topic: ``/effect`` name=``fade``
+Gradually fade between two colors with a given duration
+
+| Parameter  | type     | default  | Description          |
+| ---------- | -------- | -------- | -------------------- |
+| duration   | long     |          | Total time in ms the fade will take   |
+
+##### Example
+
+```
+mosquitto_pub -t "RGBW/001F162E/effect" -m 'name=fade duration=15000 hsb=240,100,60' # Fade from current color to blue over 15 seconds
+```
+
+### Other things you can do
+
+#### Restart the device from mqtt
+
+Topic: ``/restart``
+
+Restart the device (handy for development)
+
+##### Example
+
+```
+mosquitto_pub -t "RGBW/001F162E/restart" -m '1'
+```
+
+#### Set base address of the remote control
+
+Topic: ``/remote``
+
+Set the base address of the remote control, value will be stored in EEPROM. Currently only tested with RF.
+You can also pair the remote control by pressing in the first few seconds a key on the remote control.
+The value will be stored in EEPROM and in mqtt.
+
+##### Example
+
+```
+mosquitto_pub -t "RGBW/001F162E/remote" -m '10622464'
+```
+
+#### Force storage of settings
+
+Topic: ``/store``
+
+See also EEPROM_COMMIT_WAIT_DELAY
+
+##### Example
+
+```
+mosquitto_pub -t "RGBW/001F162E/store" -m '1'
+```
 
 #### Last Will and Testament
 
@@ -272,50 +274,14 @@ When the device successfully connects it will publish `online` to that topic and
 
 #### Home Assistance Discovery
 
-##### Current working in progress with a issue publishing the discovery package 
+Removed, I don-t use HAS and as far as I know I am the only one using my firmware
 
-This firmware supports [Home Assistant's MQTT discovery functionality], added in 0.40.
-This allows for instant setup and use of your device without requiring any manual configuration in Home Assistant.
-If you are using the MQTT JSON mode, the `light.mqtt_json` platform will be loaded. Otherwise, the `light.mqtt` platform will load. `light.mqtt_json` is required for full functionality.
-There are a few one time steps that you need to take to get this working.
 
-- Add `discovery: true` to your `mqtt` configuration in Home Assistant, if it isn't there already.
-- Uncomment the `HOME_ASSISTANT_MQTT_DISCOVERY` definitions in your `config.h` file.
-  - You can change the discovery prefix (default is `homeassistant`) by changing `HOME_ASSISTANT_MQTT_DISCOVERY_PREFIX`.
-    Make sure this matches your Home Assistant MQTT configuration.
-- Upload the firmware once more after making the previous changes.
-
-From now on your device will announce itself to Home Assistant with all of the proper configuration information.
-
-### Configuration for Home Assistant
-
-*Untested*
-
-configuration.yaml
-```yaml
-mqtt:
-  broker: 'm21.cloudmqtt.com'
-  username: '[REDACTED]'
-  password: '[REDACTED]'
-  port: '[REDACTED]'
-  discovery: true
-
-light:
-  - platform: mqtt_template
-    name: 'Arilux RGB Led Controller'
-    command_topic: "RGB(W|WW)/<chipid>/color"
-    state_topic: "RGBW(W|WW)/<chipid>/color/state"
-    state_template: "{{value.split('state=')[1] | lower}}"
-    command_on_template: "state=ON {%if brightness%}b={{brightness/2.55}}{%endif%}"
-    command_off_template: "state=OFF"
-    brightness_template: "{{(value.split('hsb=')[1].split(' ')[0].split(',')[2] | float *2.55) | int}}"
-    availability_topic: "RGB(W|WW)/<chipid>/lastwill"
-    payload_available: "online"
-    payload_not_available: "offline"
-```
 #### Configuration with homebridge
 
 Use the following plugin https://github.com/rvt/homebridge-esp8266leds
+
+or use : ´´´npm install -g homebridge-esp8266leds´´´
 Once added to homebridge you can add accessories with the following configuration
 
 ```javascript
@@ -408,9 +374,6 @@ You Must credit the author and link to this repository if you implement any of h
 ## Contributors
 
 - [@mertenats]: Initial creator of the project, documention and code
-- [@KmanOz]: Codes for the RF remote (Arilux AL-LC09)
-- [@DanGunvald]: RGBW/RGBWW support
-- [@robbiet480]: General cleanup and merging of RGBW/RGBWW code
 
 *If you like the content of this repo, please add a star! Thank you!*
 

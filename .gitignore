@@ -1,7 +1,7 @@
 setup.h
 .DS_Store
 .vscode
-tmp
+tmp/
 *.jar
 .editorconfig
 .idea

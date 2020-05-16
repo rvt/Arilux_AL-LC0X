@@ -18,7 +18,7 @@ public:
 
 public:
     // MQTT buffer
-    char m_mqttReceiveBuffer[512];
+    char m_mqttReceiveBuffer[128];
     uint16_t m_mqttSubscriberTopicStrLength;
 
     const FPower m_fPower;
@@ -29,7 +29,7 @@ public:
     const FRestart m_fRestart;
 
 public:
-    CmdHandler(const Properties& properties,
+    CmdHandler(uint8_t p_mqttSubscriberTopicStrLength,
                FPower p_fPower,
                FHsb p_fHsb,
                FFilter p_fFilter,

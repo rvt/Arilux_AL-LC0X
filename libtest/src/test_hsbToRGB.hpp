@@ -12,8 +12,8 @@ HSBToRGB* test = HsbToRGBGeneric::genericLedStrip();
 ///////////////// YELLOW /////////////////
 TEST_CASE("should convert to YELLOW s=100 b=100", "[HsbToRGBGeneric]") {
     test->toRgb(60.f, 100.f, 100.f, rgb);
-    REQUIRE(rgb[0] == Approx(81.f).margin(margin)); 
-    REQUIRE(rgb[1] == Approx(30.f).margin(margin));   
+    REQUIRE(rgb[0] == Approx(81.f).margin(margin));
+    REQUIRE(rgb[1] == Approx(30.f).margin(margin));
     REQUIRE(rgb[2] == Approx(0.f).margin(margin));
 }
 

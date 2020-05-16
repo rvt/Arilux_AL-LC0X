@@ -10,6 +10,7 @@ TEST_CASE("should map value", "[helpers]") {
     REQUIRE(Helpers::lookupTableInterp(valuemap, 4, 0.f) == Approx(1.0f));
     REQUIRE(Helpers::lookupTableInterp(valuemap, 4, 0.5f) == Approx(3.0f));
     REQUIRE(Helpers::lookupTableInterp(valuemap, 4, 1.f) == Approx(5.0f));
+    REQUIRE(Helpers::lookupTableInterp(valuemap, 4, 1.5f) == Approx(7.5f));
     REQUIRE(Helpers::lookupTableInterp(valuemap, 4, 1.75f) == Approx(8.75f));
     REQUIRE(Helpers::lookupTableInterp(valuemap, 4, 2.f) == Approx(10.0f));
     REQUIRE(Helpers::lookupTableInterp(valuemap, 4, 2.5f) == Approx(10.0f));

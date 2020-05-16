@@ -132,7 +132,7 @@ HSB TransitionEffect::handleEffect(const uint32_t p_count,
 HSB TransitionEffect::finalState(const uint32_t p_count,
                                  const uint32_t p_time,
                                  const HSB& p_hsb) const {
-    return calcHSB(p_count, m_endMillis, p_hsb);
+    return m_hsb;
 }
 
 bool TransitionEffect::isCompleted(const uint32_t p_count,

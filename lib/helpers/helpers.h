@@ -35,6 +35,7 @@ public:
 
     /**
      * Maps a input value that is from 0..100.f to a output value out_max
+     * for example of value is 75 and out_max is 150 then percentMap returns 112.5
      */
     static float percentmap(float value, float out_max) {
         return value * out_max / 100.f;
@@ -70,7 +71,7 @@ public:
         }
 
         float scale = value - floor(value);
-        float res = ((1.0f - scale) * val0) + ((scale) * val1);
+        float res = (val1 - val0) * scale + val0;
 
         return res;
     }

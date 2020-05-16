@@ -12,35 +12,35 @@
 #include <helpers.h>
 #include <makeunique.h>
 
-#define FILTER_FADING_ALPHA         0.1f
-#define FILTER_TOPIC                      "/filter"
-#define COLOR_TOPIC                       "/color"
-#define REMOTE_TOPIC                      "/remote"
-#define STATE_TOPIC                       "/state"
-#define EFFECT_TOPIC                      "/effect"
-#define STORE_TOPIC                       "/store"
-#define RESTART_TOPIC                     "/restart"
-#define FILTER                      "filter"
-#define FNAME                       "name"
-#define FILTER_NONE                 "none"
-#define FILTER_FADING               "fading"
-#define FALPHA                      "alpha"
+constexpr float FILTER_FADING_ALPHA = 0.1f;
+constexpr char FILTER_TOPIC[] = "/filter";
+constexpr char COLOR_TOPIC[] = "/color";
+constexpr char REMOTE_TOPIC[] = "/remote";
+constexpr char STATE_TOPIC[] = "/state";
+constexpr char EFFECT_TOPIC[] = "/effect";
+constexpr char STORE_TOPIC[] = "/store";
+constexpr char RESTART_TOPIC[] = "/restart";
+constexpr char FILTER[] = "filter";
+constexpr char FNAME[] = "name";
+constexpr char FILTER_NONE[] = "none";
+constexpr char FILTER_FADING[] = "fading";
+constexpr char FALPHA[] = "alpha";
 
-#define EFFECT                  "effect"
-#define ENAME                  "name"
-#define EFFECT_NONE             "none"
-#define EFFECT_FLASH            "flash"
-#define EFFECT_FADE             "fade"
-#define EFFECT_RAINBOW             "rainbow"
-#define TWIDTH                      "width"
-#define TNAME                       "name"
-#define FILTER_DURATION                   "duration"
-#define FILTER_PULSE                   "pulse"
-#define FILTER_PERIOD                  "period"
+constexpr char EFFECT[] = "effect";
+constexpr char ENAME[] = "name";
+constexpr char EFFECT_NONE[] = "none";
+constexpr char EFFECT_FLASH[] = "flash";
+constexpr char EFFECT_FADE[] = "fade";
+constexpr char EFFECT_RAINBOW[] = "rainbow";
+constexpr char TWIDTH[] = "width";
+constexpr char TNAME[] = "name";
+constexpr char FILTER_DURATION[] = "duration";
+constexpr char FILTER_PULSE[] = "pulse";
+constexpr char FILTER_PERIOD[] = "period";
 
-#define STATE                       "state"
-#define STATE_ON                         "ON"
-#define STATE_OFF                        "OFF"
+constexpr char STATE[] = "state";
+constexpr char STATE_ON[] = "ON";
+constexpr char STATE_OFF [] = "OFF";
 
 #ifndef UNIT_TEST
 #include <Arduino.h>
@@ -49,26 +49,27 @@ extern "C" uint32_t millis();
 #endif
 
 // std::ostream& operator << ( std::ostream& os, HSB const& value ) {
-//     os << "HSB(" << value.hue() << "," << value.saturation() << "," << value.brightness() << "," << value.white1() << "," << value.white2() << ")" ;
+//constexpr char    os << "HSB(" << value.hue() << "," << value.saturation() << "," << value.brightness() << "," << value.white1() << "," << value.white2() << ")" ;
 //     return os;
 // }
 
 
 CmdHandler::CmdHandler(
-    const Properties& properties,
+    uint8_t p_mqttSubscriberTopicStrLength,
     FPower p_fPower,
     FHsb p_fHsb,
     FFilter p_fFilter,
     FEffect p_fEffect,
     FRemoteBase p_fRemoteBase,
     FRestart p_fRestart) :
+    m_mqttSubscriberTopicStrLength(p_mqttSubscriberTopicStrLength),
     m_fPower(p_fPower),
     m_fHsb(p_fHsb),
     m_fFilter(p_fFilter),
     m_fEffect(p_fEffect),
     m_fRemoteBase(p_fRemoteBase),
     m_fRestart(p_fRestart)  {
-    m_mqttSubscriberTopicStrLength = properties.get("mqttSubscriberTopicStrLength").getLong();
+    ;
 }
 /*
    Function called when a MQTT message arrived
@@ -91,7 +92,10 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
     // Process topics
     // We use strstr if we want to both handle state and commands
     // we use strcmp if we just want to handle command topics
-
+    // Serial.print("Reseived: ");
+    // Serial.print(topicPos);
+    // Serial.print(" ");
+    // Serial.println(m_mqttReceiveBuffer);
     if (strstr(topicPos, COLOR_TOPIC) != nullptr) {
         bool brightnessSet;
         const HSB workingHsb = hsbFromString(p_setHsb, m_mqttReceiveBuffer, &brightnessSet);
@@ -99,25 +103,33 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
         m_fHsb(workingHsb);
 
         // If ON/OFF are used within the color topic
-        OptParser::get(m_mqttReceiveBuffer, [&](OptValue v) {
-            if (strcmp(v.asChar(), STATE_ON) == 0) {
+        OptParser::get(m_mqttReceiveBuffer, [&](OptValue value) {
+            if (strcmp(value, STATE_ON) == 0) {
                 m_fPower(true);
-            } else if (strcmp(v.asChar(), STATE_OFF) == 0) {
+            } else if (strcmp(value, STATE_OFF) == 0) {
                 m_fPower(false);
             }
         });
     }
 
+    if (strstr(topicPos, STATE_TOPIC) != nullptr) {
+        if (strcmp(m_mqttReceiveBuffer, STATE_ON) == 0) {
+            m_fPower(true);
+        } else if (strcmp(m_mqttReceiveBuffer, STATE_OFF) == 0) {
+            m_fPower(false);
+        }
+    }
+
     if (strstr(topicPos, FILTER_TOPIC) != nullptr) {
         // Get variables from payload
-        const char* name;
+        char* name;
         float alpha = FILTER_FADING_ALPHA;
-        OptParser::get(m_mqttReceiveBuffer, [&name, &alpha](OptValue v) {
+        OptParser::get(m_mqttReceiveBuffer, [&name, &alpha](OptValue value) {
             // Get variables from filter
-            if (strcmp(v.key(), FNAME) == 0) {
-                name = v.asChar();
-            } else if (strcmp(v.key(), FALPHA) == 0) {
-                alpha = std::max(0.001f, std::min(v.asFloat(), 1.0f));
+            if (strcmp(value.key(), FNAME) == 0) {
+                name = value;
+            } else if (strcmp(value.key(), FALPHA) == 0) {
+                alpha = Helpers::between((float)value, 0.001f, 1.0f);
             }
         });
 
@@ -137,26 +149,26 @@ void CmdHandler::handle(const char* p_topic, const char* p_payload, const HSB& p
     if (strstr(topicPos, EFFECT_TOPIC) != 0) {
         const HSB workingHsb = hsbFromString(p_setHsb, m_mqttReceiveBuffer, nullptr);
         // Get variables from payload
-        const char* name;
+        char* name;
         int16_t pulse = -1;
         int16_t period = -1;
         int32_t duration = -1;
-        OptParser::get(m_mqttReceiveBuffer, [&name, &period, &pulse, &duration](OptValue v) {
+        OptParser::get(m_mqttReceiveBuffer, [&name, &period, &pulse, &duration](OptValue value) {
             // Get variables from filter
-            if (strcmp(v.key(), ENAME) == 0) {
-                name = v.asChar();
+            if (strcmp(value.key(), ENAME) == 0) {
+                name = value;
             }
 
-            if (strcmp(v.key(), FILTER_PERIOD) == 0) {
-                period = v.asInt();
+            if (strcmp(value.key(), FILTER_PERIOD) == 0) {
+                period = value;
             }
 
-            if (strcmp(v.key(), FILTER_PULSE) == 0) {
-                pulse = v.asInt();
+            if (strcmp(value.key(), FILTER_PULSE) == 0) {
+                pulse = value;
             }
 
-            if (strcmp(v.key(), FILTER_DURATION) == 0) {
-                duration = v.asLong();
+            if (strcmp(value.key(), FILTER_DURATION) == 0) {
+                duration = value;
             }
         });
 
@@ -202,20 +214,26 @@ HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data, bool* brightness
         *brightnessSet = false;
     }
 
-    OptParser::get(data, [&h, &s, &b, &w1, &w2, &brightnessSet](OptValue f) {
+    char fData[64];
+    strncpy(fData, data, sizeof(fData));
+
+    OptParser::get(fData, [&h, &s, &b, &w1, &w2, &brightnessSet](OptValue f) {
         if (strcmp(f.key(), "hsb")  == 0 || strstr(f.key(), ",") != nullptr) {
-            OptParser::get(f.asChar(), ",", [&h, &s, &b, &w1, &w2, &brightnessSet](OptValue c) {
-                switch (c.pos()) {
+            // handle hsb=X,X,X,X,X
+            char ff[64];
+            strncpy(ff, f, sizeof(ff));
+            OptParser::get(ff, ',', [&h, &s, &b, &w1, &w2, &brightnessSet](OptValue value) {
+                switch (value.pos()) {
                     case 0:
-                        h = Helpers::between(c.asFloat(), 0.f, 359.9999f);
+                        h = Helpers::between((float)value, 0.f, 359.9999f);
                         break;
 
                     case 1:
-                        s = Helpers::between(c.asFloat(), 0.f, 100.f);
+                        s = Helpers::between((float)value, 0.f, 100.f);
                         break;
 
                     case 2:
-                        b = Helpers::between(c.asFloat(), 0.f, 100.f);
+                        b = Helpers::between((float)value, 0.f, 100.f);
 
                         if (brightnessSet != nullptr) {
                             *brightnessSet = true;
@@ -224,28 +242,28 @@ HSB CmdHandler::hsbFromString(const HSB& hsb, const char* data, bool* brightness
                         break;
 
                     case 3:
-                        w1 = Helpers::between(c.asFloat(), 0.f, 100.f);
+                        w1 = Helpers::between((float)value, 0.f, 100.f);
                         break;
 
                     case 4:
-                        w2 = Helpers::between(c.asFloat(), 0.f, 100.f);
+                        w2 = Helpers::between((float)value, 0.f, 100.f);
                         break;
                 }
             });
         } else if (strcmp(f.key(), "h") == 0) {
-            h = Helpers::between(f.asFloat(), 0.f, 359.99f);
+            h = Helpers::between((float)f, 0.f, 359.99f);
         } else if (strcmp(f.key(), "s") == 0) {
-            s = Helpers::between(f.asFloat(), 0.f, 100.f);
+            s = Helpers::between((float)f, 0.f, 100.f);
         } else if (strcmp(f.key(), "b") == 0) {
-            b = Helpers::between(f.asFloat(), 0.f, 100.f);
+            b = Helpers::between((float)f, 0.f, 100.f);
 
             if (brightnessSet != nullptr) {
                 *brightnessSet = true;
             }
         } else if (strcmp(f.key(), "w1") == 0) {
-            w1 = Helpers::between(f.asFloat(), 0.f, 100.f);
+            w1 = Helpers::between((float)f, 0.f, 100.f);
         } else if (strcmp(f.key(), "w2") == 0) {
-            w2 = Helpers::between(f.asFloat(), 0.f, 100.f);
+            w2 = Helpers::between((float)f, 0.f, 100.f);
         }
     });
     return HSB(h, s, b, w1, w2);

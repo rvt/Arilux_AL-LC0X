@@ -58,8 +58,6 @@ TEST_CASE("HSB can be parsed from Strings with a given HSB", "[CmdHandler]") {
 
 
 TEST_CASE("Commands can be parser", "[CmdHandler]") {
-    Properties properties;
-    properties.put("mqttSubscriberTopicStrLength", PropertyValue((int32_t)strlen(BASE_TOPIC)));
     HSB testHsb(0, 0, 0, 0, 0);
     bool restarted = false;
     bool power = false;
@@ -68,7 +66,7 @@ TEST_CASE("Commands can be parser", "[CmdHandler]") {
     Effect* effect = nullptr;
     Filter* filter = nullptr;
     CmdHandler cmdHandler(
-        properties,
+        (int32_t)strlen(BASE_TOPIC),
     [&power, &bChanged](bool p) {
         power = p;
     },
@@ -110,10 +108,6 @@ TEST_CASE("Commands can be parser", "[CmdHandler]") {
     SECTION("should beable to restart device") {
         cmdHandler.handle(BASE_TOPIC "/restart", "1", HSB(1, 2, 3, 4, 5), HSB(11, 12, 13, 14, 15), 0);
         REQUIRE(restarted == true);
-    }
-    SECTION("should beable to set remote controle address") {
-        cmdHandler.handle(BASE_TOPIC "/remote", "767432", HSB(1, 2, 3, 4, 5), HSB(11, 12, 13, 14, 15), 0);
-        REQUIRE(baseAddress == 767432);
     }
     SECTION("should beable to set filter") {
         cmdHandler.handle(BASE_TOPIC "/filter", "name=fading", HSB(1, 2, 3, 4, 5), HSB(11, 12, 13, 14, 15), 0);

@@ -1,5 +1,3 @@
-#include "setup.h"
-
 #ifndef RED_PIN
 #define RED_PIN 0
 #endif
@@ -20,105 +18,23 @@
 #define WHITE2_PIN 0
 #endif
 
-#ifndef MQTT_PREFIX
-#define MQTT_PREFIX                    "UNDEFINED"
-#endif
+constexpr char CONTROLLERCONFIG_FILENAME[] = "controller.conf";
+constexpr char LEDSTATUS_FILENAME[] = "ledstatus.conf";
 
-#ifndef DEVICE_MODEL
-#define DEVICE_MODEL                    "UNDEFINED"
-#endif
-
-// #define USE_LAST_HSB_STATE_AT_BOOT   // When defined it will use the last HSB state at boot instead of turning on
-
-// #define IR_REMOTE
-// #define RF_REMOTE
-// Base code from remote control that will be added to the key code
-#ifndef REMOTE_CODE
-#define REMOTE_CODE                            0x000000
-#endif
-
-// Pin where RF is connected to
-#ifndef RF_PIN
-#define RF_PIN                                  4
-#endif
-
-// Wi-Fi
-#ifndef WIFI_SSID
-#define WIFI_SSID                              ""
-#endif
-
-#ifndef WIFI_PASSWORD
-#define WIFI_PASSWORD                          ""
-#endif
-
-// TLS support, make sure to edit the fingerprint and the MQTT broker IP address if
-// you are not using CloudMQTT
-// #define TLS
-// #define TLS_FINGERPRINT                     "A5 02 FF 13 99 9F 8B 39 8E F1 83 4F 11 23 65 0B 32 36 FC 07"
-
-// MQTT server settings
-#ifndef MQTT_SERVER
-#define MQTT_SERVER                            "127.0.0.1"
-#endif
-
-#ifndef MQTT_PORT
-#define MQTT_PORT                              1883
-#endif
-
-#ifndef MQTT_USER
-#define MQTT_USER                              ""
-#endif
-
-#ifndef MQTT_PASS
-#define MQTT_PASS                              ""
-#endif
-
-// How often we are updating the mqtt state in ms
-#ifndef MQTT_STATE_UPDATE_DELAY
-#define MQTT_STATE_UPDATE_DELAY                       5000
-#endif
-
-// MQTT topics : RGBW/00FF1234
-#define MQTT_TOPIC_PREFIX_TEMPLATE             "%s/%s"
-
-// Last Will and Testament topic : RGBW/00FF1234/lastwill
-#define MQTT_LASTWILL_TOPIC_TEMPLATE           "%s/lastwill"
-
-#define MQTT_SUBSCRIBER_TOPIC_TEMPLATE          "%s/+"
-#define MQTT_LASTWILL_TOPIC_TEMPLATE            "%s/lastwill"
-
-// State Topics
-#define MQTT_STATE_STATE_TOPIC                 "/state/state"
-#define MQTT_REMOTE_STATE_TOPIC                "/remote/state"
-#define MQTT_COLOR_STATE_TOPIC                 "/color/state"
-#define MQTT_FILTER_STATE_TOPIC                "/filter/state"
-
-// When set we store the state (ON/OFF) in the color/state topic
-#ifndef STATE_IN_COLOR_TOPIC
-#define STATE_IN_COLOR_TOPIC                    true
-#endif
-
-
-// Base hostname, used for the MQTT Client ID and OTA hostname
-#ifndef HOSTNAME_TEMPLATE
-#define HOSTNAME_TEMPLATE                       "ARILUX%s"
-#endif
-
-// Enable console output via telnet OR SERIAL
-// #define ARILUX_DEBUG_TELNET
-// #define DEBUG_SERIAL
-
-// When set we will pause for any OTA messages before we startup, no commands are handled in this time
-// #define PAUSE_FOR_OTA
-
-
-#define MQTT_LASTWILL_ONLINE       "online"
-#define MQTT_LASTWILL_OFFLINE      "offline"
+constexpr char MQTT_STATUS[]=                           "status";
+constexpr char  MQTT_LASTWILL_TOPIC[]=                    "lastwill";
+constexpr char  MQTT_LASTWILL_ONLINE[]=                   "online";
+constexpr char  MQTT_LASTWILL_OFFLINE[]=                  "offline";
 
 // Brights at starup when the device was in a off state
 // Bright ness to be considered to be the minimum stored in EEPROM
-#define STARTUP_MIN_BRIGHTNESS 5.f
+constexpr float STARTUP_MIN_BRIGHTNESS = 5.f;
 
 // Don't change anything below here
-
 #define ARRAY_SIZE(array) (sizeof((array))/sizeof((array[0])))
+
+// Number of ms per effect transistion, 20ms == 50 Hz
+#define FRAMES_PER_SECOND        50
+#define EFFECT_PERIOD_CALLBACK   (1000 / FRAMES_PER_SECOND)
+
+
