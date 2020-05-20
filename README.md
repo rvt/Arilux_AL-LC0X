@@ -12,7 +12,7 @@ The initial code came from https://github.com/mertenats/Arilux_AL-LC0X but in th
 
 This firmware has been tested with OpenHAB and just a bit om Home Assistance.
 
-## Features:
+## Features
 
 - Fade from any color to any other color smoothly without apparent brightness changes without special commands
 - ON/OFF states will correctly fade in/out and remember the last color (in EEPROM)
@@ -30,28 +30,34 @@ This firmware has been tested with OpenHAB and just a bit om Home Assistance.
 - Native support for OpenHAB and should work with Home Assistant with MQTT
 - Fading using cie1931 math
 - Color correction using rainbow table for better color reproduction
+- Setup pins from web
 
-### Current effects are:
+### Current effects
 
 - Rainbow: Will keep fading over the rainbow of colors with a given time period
 - Transition: Change from color1 to color2 over a period of time 
 - Flash:  Flash between two colors or between black and the current color
 - Strobe: Strobe between two colors, period can be given
 
-## Todo
-
- - Setup led pins with web interface
- 
-Tested with the [ESP8266 Wi-Fi chip][esp8266] and Wemos devices.
-
 ### Configuration
 
-Configuration is done using the web interface
+Configuration is done using the web interface including LedPWM pins
 
 ## Updating
 
 OTA is enabled on this firmware. Assuming the device is plugged in you should find the device using
 ```platformio device list --mdns --logical | grep arduino```
+look for a device with a name like `RGBW_XXXXXXXX`
+
+```bash
+myMachine:Esp8266Leds rvt$ platformio device list --mdns --logical | grep arduino
+RGBW_00CCAA42._arduino._tcp.local.
+Type: _arduino._tcp.local.
+ARILUX00879231._arduino._tcp.local.
+Type: _arduino._tcp.local.
+ARILUX00AD44B1._arduino._tcp.local.
+Type: _arduino._tcp.local.
+```
 
 ## Control
 
@@ -86,19 +92,14 @@ enum BootMode {
 };
 ```
 
-#### Bootorder:
+#### Bootorder
 
 - Load default settings
 - Get HSB values from LittleFS
-- Subscribe state topic for two seconds, use any found settings over a period of two seconds
+- Subscribe state topic for two seconds
 - Subscribe to command topic and overwrite any settings found in state over a period of two seconds
 
-Considarations:
-
-- After bootsequence the device will always be on in the last configured color setting
-- If no wifi and/or mqtt server found we load up color from LittleFS 
-- When filesystem is empty we load up a brightness of 50
-- When filesystem has stored brightness of 0 we load up a brightness of minimum 5
+- Based on Bootmode we decide what we do with initial status
 
 #### Control Codes and examples
 
@@ -386,4 +387,3 @@ You Must credit the author and link to this repository if you implement any of h
 [Home Assistant's MQTT discovery functionality]: https://home-assistant.io/docs/mqtt/discovery/
 [MQTT]: http://mqtt.org/
 [Alternative firmware]: https://github.com/mertenats/Arilux_AL-LC0X 
-

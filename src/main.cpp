@@ -9,18 +9,21 @@
 #include <ESP8266WiFi.h>  // https://github.com/esp8266/Arduino
 #include <ESP8266mDNS.h>
 #include "config.h"
-#include <crceeprom.h>
+//#include <crceeprom.h>
 
 #include <ArduinoOTA.h>
-#include <ESP_EEPROM.h>
+//#include <ESP_EEPROM.h>
 #include "LittleFS.h"
 #include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
+#include <WifiManagerTypes.h>
 
 #include "pwmleds.h"
 #include "newpwmleds.h"
 #include "colorcontrollerservice.h"
 #include "statusModel.h"
 #include <hsb.h>
+#include "jscript.generated.h"
+#include "customConfig_html.generated.h"
 
 // Included in code so we can increase packet size
 // This is something that´s not possible with Arduino IDE, currently using v2.6
@@ -51,16 +54,16 @@ Properties ledStatusConfig;
 
 // Counter that keeps counting up, used for filters, effects or other means to keep EFFECT_PERIOD_CALLBACK
 // of transitions
-volatile uint32_t transitionCounter = 1;
+uint32_t transitionCounter = 1;
 
 // Keep track when the last time we ran the effect state changes
-volatile uint32_t effectPeriodStartMillis = 0;
+uint32_t effectPeriodStartMillis = 0;
 
 // True when we first startup
-volatile boolean startupFromBoot = true;
+boolean startupFromBoot = true;
 
 // Indicate that a service requested an restart. Set to millies() of current time and it will restart 5000ms later
-volatile uint32_t shouldRestart = 0;
+uint32_t shouldRestart = 0;
 
 // Pwm Leds handler
 std::unique_ptr<Leds> pwmLeds(nullptr);
@@ -76,16 +79,29 @@ StatusModel ledStatusModel;
 StatusModel lastStatusModel;
 
 
+constexpr char JBONE_URI[] =                       "/jscript.js";
 WiFiManager wm;
 #define MQTT_SERVER_LENGTH 40
 #define MQTT_PORT_LENGTH 5
 #define MQTT_USERNAME_LENGTH 18
 #define MQTT_PASSWORD_LENGTH 18
-WiFiManagerParameter wm_mqtt_server("server", "mqtt server", "", MQTT_SERVER_LENGTH);
-WiFiManagerParameter wm_mqtt_port("port", "mqtt port", "", MQTT_PORT_LENGTH);
-WiFiManagerParameter wm_mqtt_user("user", "mqtt username", "", MQTT_USERNAME_LENGTH);
-const char _customHtml_hidden[] = "type=\"password\"";
-WiFiManagerParameter wm_mqtt_password("input", "mqtt password", "", MQTT_PASSWORD_LENGTH, _customHtml_hidden, WFM_LABEL_AFTER);
+const char _default_str[] = "";
+const char _customHtml_password[] = "type=\"password\" ";
+const char _customHtml_check[] = "type=\"checkbox\" ";
+const char _customHtml_hidden[] = "type=\"hidden\" ";
+WiFiManagerParameter wm_mqtt_server("server", "mqtt server", _default_str, sizeof(_default_str)+1);
+IntParameter wm_mqtt_port("port", "mqtt port", "type='number' min='0' max='65535' onkeypress='return isNumberKey(event)' ", WFM_LABEL_BEFORE);
+WiFiManagerParameter wm_mqtt_user("user", "mqtt username", _default_str, sizeof(_default_str)+1);
+WiFiManagerParameter wm_mqtt_password("input", "mqtt password", _default_str, sizeof(_default_str)+1, _customHtml_password, WFM_LABEL_BEFORE);
+
+BoolParameter wm_pauseForOTA("pauseForOTA", "", _customHtml_hidden, WFM_LABEL_BEFORE);
+IntParameter wm_white1Pin("white1Pin", "", _customHtml_hidden, WFM_LABEL_BEFORE);
+IntParameter wm_white2Pin("white2Pin", "", _customHtml_hidden, WFM_LABEL_BEFORE);
+IntParameter wm_redPin("redPin", "", _customHtml_hidden, WFM_LABEL_BEFORE);
+IntParameter wm_greenPin("greenPin", "",  _customHtml_hidden, WFM_LABEL_BEFORE);
+IntParameter wm_bluePin("bluePin", "",  _customHtml_hidden, WFM_LABEL_BEFORE);
+
+WiFiManagerParameter wm_custom_html((char*)customConfig_html_nt);
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -114,7 +130,7 @@ bool loadConfigLittleFS(const char* filename, Properties& properties) {
                 Serial.print(F("Loading config : "));
                 Serial.println(filename);
                 deserializeProperties<64>(configFile, properties);
-                //   serializeProperties<64>(Serial, properties);
+                serializeProperties<64>(Serial, properties);
             }
 
             configFile.close();
@@ -280,6 +296,12 @@ void handleCmd(const char* topic, const char* cmd) {
 ///////////////////////////////////////////////////////////////////////////
 void serverOnlineCallback() {
     Serial.println("Server online");
+    wm.server->on(JBONE_URI, []() {
+        wm.server->sendHeader("Content-Encoding", "gzip");
+        wm.server->setContentLength(jscript_js_gz_len);
+        wm.server->send(200, "application/javascript", "");
+        wm.server->sendContent_P((char*)jscript_js_gz, jscript_js_gz_len);
+    });
 }
 
 void saveParamCallback() {
@@ -287,9 +309,18 @@ void saveParamCallback() {
 
     if (std::strlen(wm_mqtt_server.getValue()) > 0) {
         controllerConfig.put("mqttServer", PV(wm_mqtt_server.getValue()));
-        controllerConfig.put("mqttPort", PV(std::atoi(wm_mqtt_port.getValue())));
+        controllerConfig.put("mqttPort", PV((uint16_t)wm_mqtt_port.getValue()));
         controllerConfig.put("mqttUsername", PV(wm_mqtt_user.getValue()));
         controllerConfig.put("mqttPassword", PV(wm_mqtt_password.getValue()));
+        controllerConfig.put("pauseForOTA", PV(wm_pauseForOTA.getValue()));
+
+        controllerConfig.put("white1Pin", PV((int32_t)wm_white1Pin.getValue()));
+        controllerConfig.put("white2Pin", PV((int32_t)wm_white2Pin.getValue()));
+        controllerConfig.put("redPin", PV((int32_t)wm_redPin.getValue()));
+        controllerConfig.put("greenPin", PV((int32_t)wm_greenPin.getValue()));
+        controllerConfig.put("bluePin", PV((int32_t)wm_bluePin.getValue()));
+
+        Serial.print(wm_pauseForOTA.getValue());
         controllerConfigModified = true;
         // Redirect from MQTT so on the next reconnect we pickup new values
         mqttClient.disconnect();
@@ -304,12 +335,17 @@ void saveParamCallback() {
  * Setup the wifimanager and configuration page
  */
 void setupWifiManager() {
-    char port[6];
-    snprintf(port, sizeof(port), "%d", (int16_t)controllerConfig.get("mqttPort"));
-    wm_mqtt_port.setValue(port, MQTT_PORT_LENGTH);
+    wm_mqtt_port.setValue(controllerConfig.get("mqttPort"));
     wm_mqtt_password.setValue(controllerConfig.get("mqttPassword"), MQTT_PASSWORD_LENGTH);
     wm_mqtt_user.setValue(controllerConfig.get("mqttUsername"), MQTT_USERNAME_LENGTH);
     wm_mqtt_server.setValue(controllerConfig.get("mqttServer"), MQTT_SERVER_LENGTH);
+    wm_pauseForOTA.setValue(controllerConfig.get("pauseForOTA"));
+
+    wm_white1Pin.setValue(controllerConfig.get("white1Pin"));
+    wm_white2Pin.setValue(controllerConfig.get("white2Pin"));
+    wm_redPin.setValue(controllerConfig.get("redPin"));
+    wm_greenPin.setValue(controllerConfig.get("greenPin"));
+    wm_bluePin.setValue(controllerConfig.get("bluePin"));
 
     // Set extra setup page
     wm.setWebServerCallback(serverOnlineCallback);
@@ -317,6 +353,17 @@ void setupWifiManager() {
     wm.addParameter(&wm_mqtt_port);
     wm.addParameter(&wm_mqtt_user);
     wm.addParameter(&wm_mqtt_password);
+    // Custom Config parameters
+    wm.addParameter(&wm_pauseForOTA);
+    wm.addParameter(&wm_redPin);
+    wm.addParameter(&wm_greenPin);
+    wm.addParameter(&wm_bluePin);
+    wm.addParameter(&wm_white1Pin);
+    wm.addParameter(&wm_white2Pin);
+    // Custom Config HTML
+    wm.addParameter(&wm_custom_html);
+    
+    wm.setCustomHeadElement("<script src='/jscript.js'></script>");
 
     // set country
     wm.setClass("invert");
@@ -369,6 +416,12 @@ void setupDefaults() {
     // 3 last known setting at boot, and follow MQTT commands at boot
     controllerConfigModified |= controllerConfig.putNotContains("bootMode", PV(2));
     controllerConfigModified |= controllerConfig.putNotContains("pauseForOTA", PV(true));
+
+    controllerConfigModified |= controllerConfig.putNotContains("white1Pin", PV(WHITE1_PIN));
+    controllerConfigModified |= controllerConfig.putNotContains("white2Pin", PV(WHITE2_PIN));
+    controllerConfigModified |= controllerConfig.putNotContains("redPin", PV(RED_PIN));
+    controllerConfigModified |= controllerConfig.putNotContains("greenPin", PV(GREEN_PIN));
+    controllerConfigModified |= controllerConfig.putNotContains("bluePin", PV(BLUE_PIN));
 
     // Defaults for LED status
     ledStatusConfig.putNotContains("hue", PV(0.f));
@@ -621,7 +674,13 @@ void setup() {
     hSBToRGB.reset(HsbToRGBGeneric::genericLedStrip());
 
     // Start the keds
-    NewPwmLeds* leds = new NewPwmLeds(RED_PIN, GREEN_PIN, BLUE_PIN, WHITE1_PIN, WHITE2_PIN);
+    NewPwmLeds* leds = new NewPwmLeds(
+        (long)controllerConfig.get("redPin"), 
+        (long)controllerConfig.get("greenPin"), 
+        (long)controllerConfig.get("bluePin"), 
+        (long)controllerConfig.get("white1Pin"), 
+        (long)controllerConfig.get("white2Pin")
+    );
     leds->init();
     pwmLeds.reset(leds);
 
