@@ -353,6 +353,10 @@ void setupWifiManager() {
     wm.addParameter(&wm_mqtt_port);
     wm.addParameter(&wm_mqtt_user);
     wm.addParameter(&wm_mqtt_password);
+
+    // Custom Config HTML
+    wm.addParameter(&wm_custom_html);
+
     // Custom Config parameters
     wm.addParameter(&wm_pauseForOTA);
     wm.addParameter(&wm_redPin);
@@ -360,8 +364,6 @@ void setupWifiManager() {
     wm.addParameter(&wm_bluePin);
     wm.addParameter(&wm_white1Pin);
     wm.addParameter(&wm_white2Pin);
-    // Custom Config HTML
-    wm.addParameter(&wm_custom_html);
     
     wm.setCustomHeadElement("<script src='/jscript.js'></script>");
 
@@ -417,6 +419,7 @@ void setupDefaults() {
     controllerConfigModified |= controllerConfig.putNotContains("bootMode", PV(2));
     controllerConfigModified |= controllerConfig.putNotContains("pauseForOTA", PV(true));
 
+    // Adding pins
     controllerConfigModified |= controllerConfig.putNotContains("white1Pin", PV(WHITE1_PIN));
     controllerConfigModified |= controllerConfig.putNotContains("white2Pin", PV(WHITE2_PIN));
     controllerConfigModified |= controllerConfig.putNotContains("redPin", PV(RED_PIN));

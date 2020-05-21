@@ -17,55 +17,60 @@
 </br>
 <script>
     
-    var wm_pauseForOTA = $('#pauseForOTA');
-    var proxy_pauseForOTA = $('#proxy_pauseForOTA');
-    proxy_pauseForOTA[0].checked = wm_pauseForOTA[0].value==='1'?true:false;
-    proxy_pauseForOTA.on('click', (e) => {
-        wm_pauseForOTA[0].value = e.currentTarget.checked?'1':'0';
-    });
+    $('body')[0].onload = (e) => {
 
-    // manage proxy for LEDs
-    var leds = $('.proxyLed');
-    var allowedPins = [0, 1, 2, 3, 4, 5, 12, 13, 14, 15];
-    var minPinNumber = allowedPins[0];
-    var maxPinNumber = allowedPins[allowedPins.length-1];
-    var currentPins = new Set();
-    leds.forEach( led => {
-        led.min=minPinNumber; led.max=maxPinNumber; led.type='number';
-        var wmlId = led.id.replace('proxy_', '');
-        var wmInput = $('#' + wmlId)[0];
-        led.value = wmInput.value;
-        led.name = led.value;
-        currentPins.add(parseInt(led.value));
+        var wm_pauseForOTA = $('#pauseForOTA');
+        var proxy_pauseForOTA = $('#proxy_pauseForOTA');
+        proxy_pauseForOTA[0].checked = wm_pauseForOTA[0].value==='1'?true:false;
+        proxy_pauseForOTA.on('click', (e) => {
+            wm_pauseForOTA[0].value = e.currentTarget.checked?'1':'0';
+        });
 
-        led.onchange = (e) => {
-            var _this = led;
-            var _wmInput = wmInput;
-            
-            var direction = _this.value === _this.name?0:(_this.value < _this.name?-1:1);
-            var indexOfLast = allowedPins.indexOf(parseInt(_this.name));
-            // check for limits
-            if (indexOfLast<1 && direction===-1) return false;
-            if (indexOfLast>allowedPins.length-2 && direction===1) return false;
-            // Decide next pin number
-            if (direction === 0) {
-                return false;
-            } else {
-                _wmInput.value = allowedPins[indexOfLast+direction];
-            }
-            _this.value = _wmInput.value;
-            _this.name = _this.value;
-            return true;
-        };
+        // manage proxy for LEDs
+        var leds = $('.proxyLed');
+        var allowedPins = [0, 1, 2, 3, 4, 5, 12, 13, 14, 15];
+        var minPinNumber = allowedPins[0];
+        var maxPinNumber = allowedPins[allowedPins.length-1];
+        var currentPins = new Set();
+        leds.forEach( led => {
+            led.min=minPinNumber; led.max=maxPinNumber; led.type='number';
+            var wmlId = led.id.replace('proxy_', '');
+            var wmInput = $('#' + wmlId)[0];
+            led.value = wmInput.value;
+            led.name = led.value;
+            currentPins.add(parseInt(led.value));
 
-        led.onkeypress = (event) => {
-            var charCode = e.which ? e.which : e.keyCode
-            if (charCode > 31 && (charCode < 48 || charCode > 57))
-                return false;
-            return true;
-        };
-    }); 
+            led.onchange = (e) => {
+                var _this = led;
+                var _wmInput = wmInput;
+                
+                var direction = _this.value === _this.name?0:(_this.value < _this.name?-1:1);
+                var indexOfLast = allowedPins.indexOf(parseInt(_this.name));
+                // When invalid found, reset to first
+                if (indexOfLast===-1) {
+                    _this.value = allowedPins[0];
+                    _this.name =  allowedPins[0];
+                }
+                // check for limits
+                if (indexOfLast<1 && direction===-1) return false;
+                if (indexOfLast>allowedPins.length-2 && direction===1) return false;
+                // Decide next pin number
+                if (direction === 0) {
+                    return false;
+                } else {
+                    _wmInput.value = allowedPins[indexOfLast+direction];
+                }
+                _this.value = _wmInput.value;
+                _this.name = _this.value;
+                return true;
+            };
 
+            led.onkeypress = (event) => {
+                var charCode = e.which ? e.which : e.keyCode
+                if (charCode > 31 && (charCode < 48 || charCode > 57))
+                    return false;
+                return true;
+            };
+        }); 
+    };
 </script>
-
-<hr />
