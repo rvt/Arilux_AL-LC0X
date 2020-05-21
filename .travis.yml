@@ -24,6 +24,8 @@ cache:
         - "~/.platformio"
 
 install:
+    - pip install -U platformio
+    - platformio update
     - |
       if [[ ${TRAVIS_OS_NAME} == "linux" ]]; then
         DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
