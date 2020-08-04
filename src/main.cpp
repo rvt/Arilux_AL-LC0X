@@ -151,7 +151,7 @@ bool loadConfigLittleFS(const char* filename, Properties& properties) {
 /**
  * Store custom oarameter configuration in LittleFS
  */
-bool saveConfigLittleFS(const char* filename, Properties& properties) {
+bool saveConfig(const char* filename, Properties& properties) {
     bool ret = false;
 
     if (LittleFS.begin()) {
@@ -192,7 +192,7 @@ Settings ledStatusSaveHandler(
     ledStatusConfig.put("white1", PV(ledStatusModel.hsb().white1()));
     ledStatusConfig.put("white2", PV(ledStatusModel.hsb().white2()));
     ledStatusConfig.put("power", PV(ledStatusModel.power()));
-    saveConfigLittleFS(LEDSTATUS_FILENAME, ledStatusConfig);
+    saveConfig(LEDSTATUS_FILENAME, ledStatusConfig);
     storeLedStatusConfigInLittleFS = false;
 },
 []() {
@@ -348,7 +348,6 @@ void setupWifiManager() {
     wm_bluePin.setValue(controllerConfig.get("bluePin"));
 
     // Set extra setup page
-    wm.setWebServerCallback(serverOnlineCallback);
     wm.addParameter(&wm_mqtt_server);
     wm.addParameter(&wm_mqtt_port);
     wm.addParameter(&wm_mqtt_user);
@@ -367,6 +366,7 @@ void setupWifiManager() {
     
     wm.setCustomHeadElement("<script src='/jscript.js'></script>");
 
+    /////////////////
     // set country
     wm.setClass("invert");
     wm.setCountry("US"); // setting wifi country seems to improve OSX soft ap connectivity, may help others as well
@@ -375,6 +375,7 @@ void setupWifiManager() {
     wm.setShowStaticFields(false);
     wm.setConfigPortalBlocking(false); // Must be blocking or else AP stays active
     wm.setDebugOutput(false);
+    wm.setWebServerCallback(serverOnlineCallback);
     wm.setSaveParamsCallback(saveParamCallback);
     wm.setHostname(controllerConfig.get("mqttClientID"));
     std::vector<const char*> menu = {"wifi", "wifinoscan", "info", "param", "sep", "erase", "restart"};
@@ -382,8 +383,11 @@ void setupWifiManager() {
 
     wm.startWebPortal();
     wm.autoConnect(controllerConfig.get("mqttClientID"));
+    #if defined(ESP8266)
     WiFi.setSleepMode(WIFI_NONE_SLEEP);
     MDNS.begin(controllerConfig.get("mqttClientID"));
+    MDNS.addService(0, "http", "tcp", 80);
+    #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -407,11 +411,11 @@ void setupDefaults() {
     // Defaults for the controller
     controllerConfigModified |= controllerConfig.putNotContains("mqttClientID", PV(mqttClientID));
     controllerConfigModified |= controllerConfig.putNotContains("mqttBaseTopic", PV(mqttBaseTopic));
+    controllerConfigModified |= controllerConfig.putNotContains("mqttLastWillTopic", PV(mqttLastWillTopic));
     controllerConfigModified |= controllerConfig.putNotContains("mqttServer", PV(""));
     controllerConfigModified |= controllerConfig.putNotContains("mqttUsername", PV(""));
     controllerConfigModified |= controllerConfig.putNotContains("mqttPassword", PV(""));
     controllerConfigModified |= controllerConfig.putNotContains("mqttPort", PV(1883));
-    controllerConfigModified |= controllerConfig.putNotContains("mqttLastWillTopic", PV(mqttLastWillTopic));
     // 0 turn Off at boot, ignore MQTT
     // 1 turn on at boot, ignore MQTT
     // 2 last known setting at boot, ignore MQTT
@@ -553,7 +557,13 @@ void setupMQTTReconnectManager() {
 
             return 1;
         }
-
+        // For some reason the access point active, so we disable it explicitly
+        // FOR ESP32 we will keep on this state untill WIFI is connected
+        if (WiFi.status() == WL_CONNECTED) {
+            WiFi.mode(WIFI_STA);
+        } else {
+            return 2;
+        }
         return 3;
     });
     CONNECTMQTT = new State([]() {
@@ -733,7 +743,7 @@ void loop() {
         } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
             if (controllerConfigModified) {
                 controllerConfigModified = false;
-                saveConfigLittleFS(CONTROLLERCONFIG_FILENAME, controllerConfig);
+                saveConfig(CONTROLLERCONFIG_FILENAME, controllerConfig);
             }
         } else if (transitionCounter % NUMBER_OF_SLOTS == slot++) {
             mqttSaveHandler.handle();
